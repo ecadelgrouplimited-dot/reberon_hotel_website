@@ -89,7 +89,7 @@ export class MediaService implements OnModuleInit, OnModuleDestroy {
       data: { status: 'READY', width: p.width, height: p.height, lqip: p.lqip, dominantColor: p.dominantColor, variants: p.variants as unknown as Prisma.InputJsonValue },
     });
     this.log.log(`processed ${asset.originalName} (${p.width}×${p.height})`);
-    this.events.emit(Events.ContentChanged, { tags: ['media'] });
+    await this.events.emitAsync(Events.ContentChanged, { tags: ['media'] });
   }
 
   /** Every place a media asset is referenced, so nobody deletes a photo the site still shows. */

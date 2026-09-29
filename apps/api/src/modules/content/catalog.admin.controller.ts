@@ -27,7 +27,7 @@ export class ContentOps {
   ) {}
   async done(user: AuthUser, req: Request, action: string, entityType: string, entityId: string, summary: string, tags: string[], after?: unknown) {
     await this.audit.record({ actor: user, action, entityType, entityId, summary, after, req });
-    this.events.emit(Events.ContentChanged, { tags });
+    await this.events.emitAsync(Events.ContentChanged, { tags });
   }
 }
 

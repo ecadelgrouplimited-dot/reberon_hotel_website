@@ -54,7 +54,7 @@ export class SettingsAdminController {
         tx,
       );
     });
-    this.events.emit(Events.ContentChanged, { tags: ['site'] });
+    await this.events.emitAsync(Events.ContentChanged, { tags: ['site'] });
     return this.list();
   }
 }

@@ -113,7 +113,7 @@ export class PagesService {
       }
       await this.audit.record({ actor: user, action: 'page.update', entityType: 'Page', entityId: id, summary: `Edited draft of /${input.slug ?? p.slug}`, req }, tx);
     });
-    if (input.slug !== undefined && input.slug !== p.slug) this.events.emit(Events.ContentChanged, { tags: [`page:${p.slug}`, `page:${input.slug}`, 'redirects', 'nav'] });
+    if (input.slug !== undefined && input.slug !== p.slug) await this.events.emitAsync(Events.ContentChanged, { tags: [`page:${p.slug}`, `page:${input.slug}`, 'redirects', 'nav'] });
     return this.get(id);
   }
 
@@ -159,7 +159,7 @@ export class PagesService {
     } else {
       const v = await this.publishNow(id, user.id);
       await this.audit.record({ actor: user, action: 'page.publish', entityType: 'Page', entityId: id, summary: `Published /${p.slug} (v${v.version})`, req });
-      this.events.emit(Events.ContentChanged, { tags: [`page:${p.slug}`] });
+      await this.events.emitAsync(Events.ContentChanged, { tags: [`page:${p.slug}`] });
     }
     return this.get(id);
   }
@@ -170,7 +170,7 @@ export class PagesService {
     if (['HOME', 'SYSTEM'].includes(p.kind)) throw badRequest('The home page and system pages cannot be unpublished');
     await this.prisma.page.update({ where: { id }, data: { status: 'DRAFT', publishAt: null } });
     await this.audit.record({ actor: user, action: 'page.unpublish', entityType: 'Page', entityId: id, summary: `Unpublished /${p.slug}`, req });
-    this.events.emit(Events.ContentChanged, { tags: [`page:${p.slug}`] });
+    await this.events.emitAsync(Events.ContentChanged, { tags: [`page:${p.slug}`] });
     return this.get(id);
   }
 
@@ -193,7 +193,7 @@ export class PagesService {
     if (['HOME', 'SYSTEM', 'LEGAL'].includes(p.kind)) throw badRequest('This page cannot be deleted');
     await this.prisma.page.update({ where: { id }, data: { deletedAt: new Date(), status: 'ARCHIVED', slug: `${p.slug}--deleted-${Date.now()}` } });
     await this.audit.record({ actor: user, action: 'page.delete', entityType: 'Page', entityId: id, summary: `Deleted /${p.slug}`, req });
-    this.events.emit(Events.ContentChanged, { tags: [`page:${p.slug}`] });
+    await this.events.emitAsync(Events.ContentChanged, { tags: [`page:${p.slug}`] });
   }
 }
 

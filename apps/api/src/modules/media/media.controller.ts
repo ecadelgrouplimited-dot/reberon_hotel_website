@@ -71,7 +71,7 @@ export class MediaController {
   async update(@Param('id') id: string, @Body(new ZodPipe(zMediaPatch)) body: z.infer<typeof zMediaPatch>, @CurrentUser() user: AuthUser, @Req() req: Request) {
     const m = await this.prisma.mediaAsset.update({ where: { id }, data: { ...body, tags: body.tags?.map((t) => t.toLowerCase().trim()).filter(Boolean) } as Prisma.MediaAssetUpdateInput });
     await this.audit.record({ actor: user, action: 'media.update', entityType: 'MediaAsset', entityId: id, summary: `Updated ${m.originalName}`, after: body, req });
-    this.events.emit(Events.ContentChanged, { tags: ['media'] });
+    await this.events.emitAsync(Events.ContentChanged, { tags: ['media'] });
     return this.media.toDTO(m);
   }
 

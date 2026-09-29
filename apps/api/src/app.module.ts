@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from './common/throttler.guard.js';
 import { CommonModule } from './common/common.module.js';
 import { AdminGuard } from './common/auth.js';
 import { ProblemFilter } from './common/problem.filter.js';
@@ -27,7 +28,7 @@ import { HealthController } from './modules/health.controller.js';
   ],
   controllers: [HealthController],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: AdminGuard },
     { provide: APP_FILTER, useClass: ProblemFilter },
   ],

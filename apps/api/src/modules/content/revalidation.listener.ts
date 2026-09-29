@@ -16,10 +16,15 @@ export class RevalidationListener {
 
   constructor(private readonly cache: CacheService) {}
 
-  @OnEvent(Events.ContentChanged, { async: true })
+  /** Awaited by the request that changed content: the API cache is clean before the response goes out. */
+  @OnEvent(Events.ContentChanged)
   async onContentChanged(e: ContentChangedEvent) {
     const tags = [...new Set([...e.tags, 'pages'])];
     await this.cache.bust(tags);
+    void this.notifyWeb(tags); // network hop to the website: never block the editor on it
+  }
+
+  private async notifyWeb(tags: string[]) {
     const body = JSON.stringify({ tags: [...tags, 'content'], ts: Date.now() });
     const signature = createHmac('sha256', env.REVALIDATE_SECRET).update(body).digest('hex');
     try {

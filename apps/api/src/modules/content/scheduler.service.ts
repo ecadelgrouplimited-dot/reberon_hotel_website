@@ -25,6 +25,6 @@ export class SchedulerService {
       await this.audit.record({ actorType: 'SYSTEM', action: 'page.publish', entityType: 'Page', entityId: p.id, summary: `Scheduled publish of /${p.slug}` });
       this.log.log(`published scheduled page /${p.slug}`);
     }
-    if (due.length) this.events.emit(Events.ContentChanged, { tags: due.map((p) => `page:${p.slug}`) });
+    if (due.length) await this.events.emitAsync(Events.ContentChanged, { tags: due.map((p) => `page:${p.slug}`) });
   }
 }

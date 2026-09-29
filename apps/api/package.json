@@ -8,7 +8,7 @@
     "dev": "nest start --watch --preserveWatchOutput",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test --test-concurrency=1 --import tsx test/*.test.ts"
+    "test": "node --test --test-concurrency=1 --experimental-strip-types test/api.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.1.1",

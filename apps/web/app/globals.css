@@ -217,7 +217,7 @@ details.acc .acc-icon { transition: transform 0.4s var(--ease-out-soft); }
 details.acc[open] .acc-icon { transform: rotate(45deg); }
 
 /* Horizontal scroll strips */
-.snap-x-strip { scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+.snap-x-strip { scroll-snap-type: x mandatory; scroll-padding-inline: clamp(1rem, 4vw, 2.5rem); scrollbar-width: none; overscroll-behavior-x: contain; }
 .snap-x-strip::-webkit-scrollbar { display: none; }
 .snap-x-strip > * { scroll-snap-align: start; }
 
@@ -240,7 +240,7 @@ dialog.sheet .sheet-panel { transition: transform 0.55s var(--ease-out-soft), op
 .input {
   width: 100%;
   min-height: 3.1rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--fg);

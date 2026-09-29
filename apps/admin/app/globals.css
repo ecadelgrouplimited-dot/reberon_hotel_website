@@ -56,7 +56,7 @@
 }
 
 @layer components {
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
   .input {
     width: 100%;
     min-height: 2.5rem;

@@ -88,7 +88,7 @@ export function ContactCard({ block, site }: BlockProps<H>) {
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map((x, i) => (
           <li key={x.label} data-reveal style={{ ['--i' as string]: i }}>
-            <a href={x.href} {...(x.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className="group flex h-full flex-col rounded-[var(--radius-lg)] border border-line bg-surface p-6 transition-all duration-500 hover:-translate-y-1 hover:border-line-strong hover:shadow-[var(--shadow-soft)]">
+            <a href={x.href} {...(x.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className="group flex h-full flex-col rounded-[var(--r-lg)] border border-line bg-surface p-6 transition-all duration-500 hover:-translate-y-1 hover:border-line-strong hover:shadow-[var(--shadow-soft)]">
               <span className="grid size-12 place-items-center rounded-full bg-surface-2 text-brand transition-colors group-hover:bg-accent group-hover:text-accent-fg">{x.icon}</span>
               <span className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-fg-subtle">{x.label}</span>
               <span className="mt-1 break-words text-step-1 font-medium">{x.value}</span>
@@ -125,7 +125,7 @@ export function FormBlock({ block, kind }: BlockProps<H & { intent?: string; suc
         <SectionHeading eyebrow={d.eyebrow} heading={d.heading} intro={d.intro} size="md" />
         <Contour className="mt-10 hidden h-24 lg:block" lines={5} seed={kind === 'enquiry' ? 2 : 6} />
       </div>
-      <div className="rounded-[var(--radius-xl)] border border-line bg-surface p-6 shadow-[var(--shadow-soft)] sm:p-10" data-reveal>
+      <div className="rounded-[var(--r-xl)] border border-line bg-surface p-6 shadow-[var(--shadow-soft)] sm:p-10" data-reveal>
         {kind === 'enquiry' ? <EnquiryForm intent={d.intent} successMessage={t(d.successMessage)} /> : <WaitlistForm successMessage={t(d.successMessage)} />}
       </div>
     </div>
@@ -136,7 +136,7 @@ export function CtaBand({ block, media, site, ctx }: BlockProps<{ heading: LText
   const img = block.data.media ? media[block.data.media] : null;
   return (
     <div className="container-x">
-      <div className={cn('grain relative isolate overflow-hidden rounded-[var(--radius-xl)] px-6 py-20 text-center text-mist-50 md:px-16 md:py-28', !img && 'bg-moss-900')}>
+      <div className={cn('grain relative isolate overflow-hidden rounded-[var(--r-xl)] px-6 py-20 text-center text-mist-50 md:px-16 md:py-28', !img && 'bg-moss-900')}>
         {img && (
           <div className="absolute inset-0 -z-10">
             <div className="parallax-slow absolute inset-[-10%_0]">

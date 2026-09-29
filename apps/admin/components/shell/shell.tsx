@@ -11,6 +11,7 @@ import { ConfirmProvider } from '@/components/ui/confirm';
 import { Kbd, Skeleton } from '@/components/ui/bits';
 import { NAV } from './nav';
 import { CommandPalette } from './command-palette';
+import { WebsiteHealth } from './website-health';
 
 function useBadges(enabled: boolean) {
   const inbox = useQuery({ queryKey: ['badge', 'inbox'], queryFn: () => get<{ counts: Record<string, number> }>('/conversations?limit=1'), enabled, refetchInterval: 60_000 });
@@ -190,6 +191,11 @@ export function Shell({ children }: { children: ReactNode }) {
             <AccountMenu />
           </div>
         </header>
+        {me && (
+          <MeProvider me={me}>
+            <WebsiteHealth />
+          </MeProvider>
+        )}
         <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {me ? (
             <MeProvider me={me}>

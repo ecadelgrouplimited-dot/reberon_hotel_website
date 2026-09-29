@@ -9,7 +9,7 @@ import { RichText } from '@/components/ui/rich-text';
 import { GalleryGrid } from '@/components/blocks/gallery';
 import { ProgressRing } from '@/components/blocks/place';
 
-export const revalidate = 3600;
+export const revalidate = 60;
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
@@ -50,13 +50,13 @@ export default async function ProgressPage({ params }: Props) {
       )}
       <nav className="container-x grid gap-4 pb-24 sm:grid-cols-2" aria-label="More updates">
         {u.older ? (
-          <Link href={`/rising/${u.older.slug}`} className="group rounded-[var(--radius-lg)] border border-line p-6 hover:border-line-strong">
+          <Link href={`/rising/${u.older.slug}`} className="group rounded-[var(--r-lg)] border border-line p-6 hover:border-line-strong">
             <span className="text-sm text-fg-subtle">← Earlier</span>
             <span className="mt-2 block text-step-1 font-medium group-hover:text-accent">{t(u.older.title)}</span>
           </Link>
         ) : <span />}
         {u.newer && (
-          <Link href={`/rising/${u.newer.slug}`} className="group rounded-[var(--radius-lg)] border border-line p-6 text-right hover:border-line-strong">
+          <Link href={`/rising/${u.newer.slug}`} className="group rounded-[var(--r-lg)] border border-line p-6 text-right hover:border-line-strong">
             <span className="inline-flex items-center gap-1 text-sm text-fg-subtle">Later <ArrowRight className="size-3.5" /></span>
             <span className="mt-2 block text-step-1 font-medium group-hover:text-accent">{t(u.newer.title)}</span>
           </Link>

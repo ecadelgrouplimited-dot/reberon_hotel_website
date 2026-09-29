@@ -17,7 +17,8 @@ export class ApiError extends Error {
 
 /**
  * Every content read is tagged "content"; the API calls /api/revalidate with
- * that tag after any publish. In draft mode we bypass the cache and send the
+ * that tag after any publish (instant). The 60s window is the safety net: if a
+ * refresh call is ever lost, the site still catches up within a minute. In draft mode we bypass the cache and send the
  * preview token so the API returns drafts.
  */
 async function get<T>(path: string): Promise<T> {
@@ -35,7 +36,7 @@ async function get<T>(path: string): Promise<T> {
   }
   const res = await fetch(`${API}/v1/public${path}`, {
     headers,
-    ...(draft ? { cache: 'no-store' as const } : { next: { tags: ['content'], revalidate: 3600 } }),
+    ...(draft ? { cache: 'no-store' as const } : { next: { tags: ['content'], revalidate: 60 } }),
   });
   if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => ({})));
   return res.json() as Promise<T>;

@@ -76,7 +76,7 @@ export function ProgressEntry({ u, i }: { u: ProgressDTO; i: number }) {
       {u.media.length > 0 && (
         <div className="snap-x-strip -mr-[clamp(1rem,4vw,2.5rem)] flex gap-3 overflow-x-auto pr-[clamp(1rem,4vw,2.5rem)]">
           {u.media.map((m) => (
-            <MediaImage key={m.id} media={m} sizes="(min-width:768px) 30vw, 70vw" className="aspect-[4/3] w-[70vw] shrink-0 rounded-[var(--radius-md)] sm:w-[40vw] lg:w-[22rem]" />
+            <MediaImage key={m.id} media={m} sizes="(min-width:768px) 30vw, 70vw" className="aspect-[4/3] w-[70vw] shrink-0 rounded-[var(--r-md)] sm:w-[40vw] lg:w-[22rem]" />
           ))}
         </div>
       )}
@@ -120,7 +120,7 @@ export function ProgressTimeline({ block }: BlockProps<H & { showLink?: boolean 
 /* ───── Destinations ───── */
 export function DestinationCard({ d, i, large, wide }: { d: DestinationCardDTO; i: number; large?: boolean; wide?: boolean }) {
   return (
-    <Link href={`/kapchorwa/${d.slug}`} className="group zoom-on-hover relative block overflow-hidden rounded-[var(--radius-lg)] text-mist-50" data-reveal style={{ ['--i' as string]: i }}>
+    <Link href={`/kapchorwa/${d.slug}`} className="group zoom-on-hover relative block overflow-hidden rounded-[var(--r-lg)] text-mist-50" data-reveal style={{ ['--i' as string]: i }}>
       <MediaImage media={d.hero} sizes={large || wide ? '(min-width:1024px) 60vw, 100vw' : '(min-width:1024px) 30vw, 100vw'} className={cn(large ? 'aspect-[4/5] lg:aspect-auto lg:h-full lg:min-h-[36rem]' : wide ? 'aspect-[4/5] sm:aspect-[16/9]' : 'aspect-[4/5]')} />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgb(18_21_19/.85)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
@@ -244,7 +244,7 @@ export function Journey({ stops, eyebrow, heading, intro }: { stops: Stop[]; eye
           })}
         </svg>
       </div>
-      <ol className="mt-12 grid gap-px overflow-hidden rounded-[var(--radius-lg)] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+      <ol className="mt-12 grid gap-px overflow-hidden rounded-[var(--r-lg)] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
         {pts.map((p, i) => (
           <li key={i} className="bg-bg p-6 [.tone-dark_&]:bg-basalt-950" data-reveal="fade" style={{ ['--i' as string]: i % 3 }}>
             <p className="flex items-baseline justify-between text-sm text-fg-subtle">
@@ -286,7 +286,7 @@ export function SeasonStrip({ block }: BlockProps<H & { months?: { month: string
       <ol className="grid grid-cols-6 gap-2 md:grid-cols-12">
         {months.map((m, i) => (
           <li key={m.month} className="group flex flex-col" data-reveal style={{ ['--i' as string]: i % 6 }}>
-            <div className="relative flex h-40 items-end rounded-[var(--radius-md)] bg-surface-2 p-1.5">
+            <div className="relative flex h-40 items-end rounded-[var(--r-md)] bg-surface-2 p-1.5">
               <div className="w-full rounded-[8px] transition-all duration-700" style={{ height: `${Math.max(8, ((m.rainyDays ?? 0) / max) * 100)}%`, background: SEASON_COLOR[m.season] }} />
               <span className="absolute left-1/2 top-2 -translate-x-1/2 text-xs font-semibold tabular text-fg-muted">{m.rainyDays ?? '–'}</span>
             </div>

@@ -48,10 +48,14 @@
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
 
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 24px;
-  --radius-xl: 36px;
+}
+
+/* Brand radii live outside Tailwind's scale so rounded-sm…3xl keep their defaults. */
+:root {
+  --r-sm: 6px;
+  --r-md: 12px;
+  --r-lg: 24px;
+  --r-xl: 36px;
 }
 
 @theme inline {

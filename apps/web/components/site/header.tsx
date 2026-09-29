@@ -74,10 +74,10 @@ export function Header() {
                     </Link>
                     {item.children.length > 0 && (
                       <div className="invisible absolute left-1/2 top-full -translate-x-1/2 translate-y-2 pt-3 opacity-0 transition-all duration-300 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                        <ul className="min-w-60 rounded-[var(--radius-lg)] border border-line bg-surface p-2 text-fg shadow-[var(--shadow-lift)]">
+                        <ul className="min-w-60 rounded-[var(--r-lg)] border border-line bg-surface p-2 text-fg shadow-[var(--shadow-lift)]">
                           {item.children.map((c) => (
                             <li key={c.id}>
-                              <Link href={c.href} className="block rounded-[var(--radius-md)] px-4 py-2.5 text-sm transition-colors hover:bg-surface-2">
+                              <Link href={c.href} className="block rounded-[var(--r-md)] px-4 py-2.5 text-sm transition-colors hover:bg-surface-2">
                                 {t(c.label)}
                               </Link>
                             </li>

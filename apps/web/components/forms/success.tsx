@@ -7,7 +7,7 @@ import { useSite } from '@/components/site/site-provider';
 export function FormSuccess({ reference, message, title = 'Received.' }: { reference: string; message: string; title?: string }) {
   const { site } = useSite();
   return (
-    <div role="status" aria-live="polite" className="fade-up rounded-[var(--radius-lg)] border border-line bg-surface p-8 text-center" style={{ ['--d' as string]: '0s' }}>
+    <div role="status" aria-live="polite" className="fade-up rounded-[var(--r-lg)] border border-line bg-surface p-8 text-center" style={{ ['--d' as string]: '0s' }}>
       <div className="mx-auto grid size-14 place-items-center rounded-full bg-moss-700 text-mist-50">
         <Check className="size-7" strokeWidth={1.8} />
       </div>

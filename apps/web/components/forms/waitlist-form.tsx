@@ -33,14 +33,14 @@ export function WaitlistForm({ successMessage }: { successMessage?: string }) {
       <Honeypot />
       <input type="hidden" name="idempotencyKey" value={key} />
       {state.status === 'error' && state.message && (
-        <p role="alert" className="rounded-[var(--radius-md)] border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{state.message}</p>
+        <p role="alert" className="rounded-[var(--r-md)] border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{state.message}</p>
       )}
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Your name" name="name" required autoComplete="name" defaultValue={v.name} error={e.name} />
         <Field label="Phone or WhatsApp" name="phone" type="tel" inputMode="tel" required autoComplete="tel" placeholder="07xx xxx xxx" defaultValue={v.phone} error={e.phone} />
         <Field label="Email (optional)" name="email" type="email" autoComplete="email" defaultValue={v.email} error={e.email} className="sm:col-span-2" />
       </div>
-      <fieldset className="grid gap-5 rounded-[var(--radius-lg)] border border-line p-5">
+      <fieldset className="grid gap-5 rounded-[var(--r-lg)] border border-line p-5">
         <legend className="px-2 text-sm font-semibold">Your stay</legend>
         <Select label="Room" name="roomTypeSlug" defaultValue={v.roomTypeSlug ?? ''}>
           <option value="">Any room</option>

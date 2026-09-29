@@ -1,7 +1,7 @@
 import { CmsPage, cmsMetadata } from '@/lib/cms-page';
 import { api } from '@/lib/api';
 
-export const revalidate = 3600;
+export const revalidate = 60;
 export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string[] }> };

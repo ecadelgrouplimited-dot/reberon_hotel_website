@@ -208,7 +208,7 @@ export function PageBuilder({ id }: { id: string }) {
         </div>
         <Status value={meta.status} />
         {meta.status === 'SCHEDULED' && meta.publishAt && <Pill tone="blue">{dateTime(meta.publishAt)}</Pill>}
-        <SaveIndicator state={save} onReload={() => qc.invalidateQueries({ queryKey: ['page', id] })} onRetry={() => void persist()} />
+        <SaveIndicator state={save} unpublished={meta.hasUnpublishedChanges && meta.status !== 'SCHEDULED'} onReload={() => qc.invalidateQueries({ queryKey: ['page', id] })} onRetry={() => void persist()} />
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button size="sm" variant="ghost" icon={<History className="size-4" />} onClick={() => setHistory(true)}>History</Button>
           {previewUrl && (
@@ -358,7 +358,7 @@ export function PageBuilder({ id }: { id: string }) {
               <RefreshCw className="size-4" />
             </button>
           </div>
-          <PreviewFrame url={previewUrl} device={device} reloadKey={frameKey} anchor={block?.anchor} />
+          <PreviewFrame url={previewUrl} device={device} reloadKey={frameKey} anchor={block ? (block.anchor ?? `b-${block.id}`) : undefined} />
         </section>
       </div>
 
@@ -369,7 +369,7 @@ export function PageBuilder({ id }: { id: string }) {
   );
 }
 
-function SaveIndicator({ state, onReload, onRetry }: { state: SaveState; onReload: () => void; onRetry: () => void }) {
+function SaveIndicator({ state, unpublished, onReload, onRetry }: { state: SaveState; unpublished: boolean; onReload: () => void; onRetry: () => void }) {
   if (state === 'conflict') {
     return (
       <span className="flex items-center gap-2 rounded-full bg-warning/10 px-3 py-1 text-[12px] font-semibold text-warning">
@@ -381,7 +381,11 @@ function SaveIndicator({ state, onReload, onRetry }: { state: SaveState; onReloa
   return (
     <span className="flex items-center gap-1.5 text-[12px] text-fg-subtle" aria-live="polite">
       {state === 'saving' ? <LoaderCircle className="size-3.5 animate-spin" /> : state === 'dirty' ? <span className="size-1.5 rounded-full bg-warning" /> : <Check className="size-3.5 text-success" />}
-      {state === 'saving' ? 'Saving…' : state === 'dirty' ? 'Unsaved' : 'Draft saved'}
+      {state === 'saving' ? 'Saving…' : state === 'dirty' ? 'Unsaved' : unpublished ? (
+        <span className="font-semibold text-warning">Saved as draft — Publish to update the website</span>
+      ) : (
+        'Draft saved'
+      )}
     </span>
   );
 }

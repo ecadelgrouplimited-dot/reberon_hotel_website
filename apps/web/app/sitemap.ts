@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 import { api } from '@/lib/api';
 import { WEB_URL } from '@/lib/seo';
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pages = await api.pageIndex().catch(() => []);

@@ -55,7 +55,7 @@ export function Hero({ block, media, site, ctx, index }: BlockProps<HeroData>) {
           <Ctas ctas={d.ctas ?? []} site={site} ctx={ctx} />
         </div>
         <div className="relative" data-reveal="mask">
-          <MediaImage media={images[0]} sizes="(min-width: 1024px) 45vw, 100vw" priority={first} className="aspect-[4/5] rounded-[var(--radius-xl)] md:aspect-[5/6]" imgClassName="ken-burns" badge />
+          <MediaImage media={images[0]} sizes="(min-width: 1024px) 45vw, 100vw" priority={first} className="aspect-[4/5] rounded-[var(--r-xl)] md:aspect-[5/6]" imgClassName="ken-burns" badge />
           <svg className="absolute -bottom-6 -left-6 hidden h-24 w-24 text-gold-400 md:block" viewBox="0 0 100 100" aria-hidden>
             <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="2 5" />
           </svg>

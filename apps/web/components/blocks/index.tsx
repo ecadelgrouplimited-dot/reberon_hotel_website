@@ -56,7 +56,7 @@ export function Blocks({ page, site, ctx = {} }: { page: Pick<PageDTO, 'blocks' 
         const el = <C block={block as never} media={page.media} site={site} ctx={ctx} index={index} />;
         if (BLEED.has(block.type)) {
           return (
-            <div key={block.id} id={block.anchor} className={tone}>
+            <div key={block.id} id={block.anchor ?? `b-${block.id}`} className={tone}>
               {el}
             </div>
           );
@@ -64,7 +64,7 @@ export function Blocks({ page, site, ctx = {} }: { page: Pick<PageDTO, 'blocks' 
         const prevTone = page.blocks[index - 1]?.tone ?? 'default';
         const tight = index > 0 && prevTone === (block.tone ?? 'default') && !BLEED.has(page.blocks[index - 1]!.type);
         return (
-          <section key={block.id} id={block.anchor} className={cn(tone, 'section-y', tight && '!pt-0')}>
+          <section key={block.id} id={block.anchor ?? `b-${block.id}`} className={cn(tone, 'section-y', tight && '!pt-0')}>
             {el}
           </section>
         );

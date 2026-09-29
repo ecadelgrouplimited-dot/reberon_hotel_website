@@ -11,7 +11,7 @@ export function MapEmbed({ lat, lng, zoom, label }: { lat: number; lng: number; 
   const d = 0.02 * (14 / zoom);
   const osm = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - d},${lat - d * 0.6},${lng + d},${lat + d * 0.6}&layer=mapnik&marker=${lat},${lng}`;
   return (
-    <div className="overflow-hidden rounded-[var(--radius-xl)] border border-line bg-surface" data-reveal>
+    <div className="overflow-hidden rounded-[var(--r-xl)] border border-line bg-surface" data-reveal>
       <div className="relative aspect-[16/10] bg-moss-900">
         {live ? (
           <iframe title={`Map showing ${label}`} src={osm} className="absolute inset-0 size-full" loading="lazy" />

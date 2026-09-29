@@ -37,7 +37,7 @@ export function Story({ block, media, site, ctx }: BlockProps<H & { body?: LRich
       </div>
       {img && (
         <div data-reveal="mask" className={cn('relative', v === 'stacked' && 'lg:order-first')}>
-          <div className="overflow-hidden rounded-[var(--radius-xl)]">
+          <div className="overflow-hidden rounded-[var(--r-xl)]">
             <div className="parallax-slow scale-110">
               <MediaImage media={img} sizes="(min-width: 1024px) 50vw, 100vw" className={cn(v === 'stacked' ? 'aspect-[21/9]' : 'aspect-[4/5]')} />
             </div>
@@ -92,7 +92,7 @@ export function RoomFacts({ room, className }: { room: Pick<RoomTypeCardDTO, 'sl
 export function RoomCard({ room, i, showPrice = true, size = 'md' }: { room: RoomTypeCardDTO; i: number; showPrice?: boolean; size?: 'md' | 'lg' }) {
   return (
     <Link href={`/rooms/${room.slug}`} className="group zoom-on-hover block" data-reveal style={{ ['--i' as string]: i % 2 }}>
-      <div className="relative overflow-hidden rounded-[var(--radius-lg)]">
+      <div className="relative overflow-hidden rounded-[var(--r-lg)]">
         <ViewTransition name={`room-${room.slug}`}>
           <MediaImage media={room.hero} sizes="(min-width: 1024px) 45vw, 100vw" className={size === 'lg' ? 'aspect-[16/11]' : 'aspect-[4/5] md:aspect-[5/6]'} badge />
         </ViewTransition>
@@ -136,9 +136,9 @@ export function RoomSpotlight({ block }: BlockProps<H, { roomType: RoomTypeCardD
   return (
     <div className="container-x grid items-center gap-12 lg:grid-cols-[1.4fr_1fr]">
       <div className="grid grid-cols-6 gap-3" data-reveal>
-        <MediaImage media={r.hero} sizes="(min-width:1024px) 55vw, 100vw" className="col-span-6 aspect-[16/10] rounded-[var(--radius-lg)]" badge />
+        <MediaImage media={r.hero} sizes="(min-width:1024px) 55vw, 100vw" className="col-span-6 aspect-[16/10] rounded-[var(--r-lg)]" badge />
         {r.gallery.slice(1, 4).map((m) => (
-          <MediaImage key={m.id} media={m} sizes="20vw" className="col-span-2 aspect-square rounded-[var(--radius-md)]" />
+          <MediaImage key={m.id} media={m} sizes="20vw" className="col-span-2 aspect-square rounded-[var(--r-md)]" />
         ))}
       </div>
       <div>
@@ -170,7 +170,7 @@ export function Facilities({ block }: BlockProps<H, { facilities: FacilityDTO[] 
   return (
     <div className="container-x">
       <SectionHeading eyebrow={block.data.eyebrow} heading={block.data.heading} intro={block.data.intro} className="mb-14" />
-      <ul className="grid gap-px overflow-hidden rounded-[var(--radius-lg)] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-px overflow-hidden rounded-[var(--r-lg)] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
         {items.map((f, i) => (
           <li key={f.id} className="group relative flex flex-col bg-bg p-7 transition-colors [.tone-warm_&]:bg-bg-warm" data-reveal="fade" style={{ ['--i' as string]: i % 3 }}>
             <div className="flex items-start justify-between gap-4">
@@ -186,7 +186,7 @@ export function Facilities({ block }: BlockProps<H, { facilities: FacilityDTO[] 
             <h3 className="mt-8 text-step-2">{t(f.name)}</h3>
             <p className="mt-3 flex-1 text-fg-muted">{t(f.summary)}</p>
             {f.media[0] && (
-              <MediaImage media={f.media[0]} sizes="(min-width:1024px) 30vw, 90vw" className="mt-6 aspect-[16/9] rounded-[var(--radius-md)] opacity-90 transition-opacity group-hover:opacity-100" />
+              <MediaImage media={f.media[0]} sizes="(min-width:1024px) 30vw, 90vw" className="mt-6 aspect-[16/9] rounded-[var(--r-md)] opacity-90 transition-opacity group-hover:opacity-100" />
             )}
           </li>
         ))}

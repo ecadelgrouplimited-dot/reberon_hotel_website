@@ -13,7 +13,7 @@ import { Journey, DestinationCard } from '@/components/blocks/place';
 import { GalleryGrid } from '@/components/blocks/gallery';
 import { CtaBand } from '@/components/blocks/closing';
 
-export const revalidate = 3600;
+export const revalidate = 60;
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {

@@ -32,7 +32,7 @@ export function EnquiryForm({
       <input type="hidden" name="idempotencyKey" value={key} />
       <input type="hidden" name="pagePath" value={pathname} />
       {state.status === 'error' && state.message && (
-        <p role="alert" className="rounded-[var(--radius-md)] border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{state.message}</p>
+        <p role="alert" className="rounded-[var(--r-md)] border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{state.message}</p>
       )}
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Your name" name="name" required autoComplete="name" defaultValue={v.name} error={e.name} />

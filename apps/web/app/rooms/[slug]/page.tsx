@@ -15,7 +15,7 @@ import { RoomActions } from '@/components/site/room-actions';
 import { RoomCard, RoomFacts } from '@/components/blocks/content';
 import { GalleryGrid } from '@/components/blocks/gallery';
 
-export const revalidate = 3600;
+export const revalidate = 60;
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
@@ -64,10 +64,10 @@ export default async function RoomPage({ params }: Props) {
         </Link>
         <div className="mt-6 grid gap-3 md:grid-cols-[2fr_1fr] md:grid-rows-2 md:h-[min(72vh,44rem)]">
           <ViewTransition name={`room-${slug}`}>
-            <MediaImage media={room.hero} priority sizes="(min-width:768px) 66vw, 100vw" className="aspect-[4/3] rounded-[var(--radius-lg)] md:row-span-2 md:aspect-auto md:h-full" badge />
+            <MediaImage media={room.hero} priority sizes="(min-width:768px) 66vw, 100vw" className="aspect-[4/3] rounded-[var(--r-lg)] md:row-span-2 md:aspect-auto md:h-full" badge />
           </ViewTransition>
-          {second && <MediaImage media={second} sizes="33vw" className="hidden rounded-[var(--radius-lg)] md:block md:h-full" />}
-          {third && <MediaImage media={third} sizes="33vw" className="hidden rounded-[var(--radius-lg)] md:block md:h-full" />}
+          {second && <MediaImage media={second} sizes="33vw" className="hidden rounded-[var(--r-lg)] md:block md:h-full" />}
+          {third && <MediaImage media={third} sizes="33vw" className="hidden rounded-[var(--r-lg)] md:block md:h-full" />}
         </div>
       </div>
 
@@ -100,7 +100,7 @@ export default async function RoomPage({ params }: Props) {
         </div>
 
         <aside className="lg:sticky lg:top-28 lg:self-start">
-          <div className="rounded-[var(--radius-xl)] border border-line bg-surface p-6 shadow-[var(--shadow-soft)] sm:p-8">
+          <div className="rounded-[var(--r-xl)] border border-line bg-surface p-6 shadow-[var(--shadow-soft)] sm:p-8">
             <div className="flex items-center justify-between gap-3">
               <Price price={room.fromPrice} className="text-lg" />
               <CurrencyToggle />

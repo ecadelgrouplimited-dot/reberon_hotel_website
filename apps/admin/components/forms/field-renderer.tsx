@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, GripVertical, ImagePlus, Plus, Trash2, X } from 'lucide-react';
-import { CTA_ACTIONS, type FieldDef, type RefEntity, type Cta } from '@reberon/contracts';
+import { BLOCKS, BLOCK_MAP, CTA_ACTIONS, type Block, type FieldDef, type RefEntity, type Cta } from '@reberon/contracts';
 import { t, type LText, type LRich } from '@reberon/contracts/text';
 import { get, thumb } from '@/lib/api';
 import { cn } from '@/lib/cn';
@@ -18,7 +18,8 @@ export type AdminFieldDef =
   | { kind: 'date'; name: string; label: string; required?: boolean; help?: string }
   | { kind: 'textarea'; name: string; label: string; help?: string }
   | { kind: 'refs'; name: string; label: string; entity: RefEntity | 'amenity'; help?: string }
-  | { kind: 'group'; label: string; fields: AdminFieldDef[]; columns?: 2 | 3 };
+  | { kind: 'group'; label: string; fields: AdminFieldDef[]; columns?: 2 | 3 }
+  | { kind: 'blocks'; name: string; label: string; help?: string };
 
 type Values = Record<string, unknown>;
 type Errors = Record<string, string>;
@@ -42,21 +43,22 @@ function useEntity(entity: string) {
   });
 }
 
-export function FieldRenderer({ fields, value, onChange, errors = {}, prefix = '' }: { fields: AdminFieldDef[]; value: Values; onChange: (v: Values) => void; errors?: Errors; prefix?: string }) {
+export function FieldRenderer({ fields, value, onChange, errors = {}, prefix = '', bare }: { fields: AdminFieldDef[]; value: Values; onChange: (v: Values) => void; errors?: Errors; prefix?: string; bare?: boolean }) {
   const set = (name: string, v: unknown) => onChange({ ...value, [name]: v });
+  const Wrap = 'div';
   return (
-    <div className="grid gap-5">
+    <Wrap className={bare ? 'contents' : 'grid gap-5'}>
       {fields.map((f, i) => {
         if (f.kind === 'group') {
           return (
             <div key={`g${i}`} className={cn('grid gap-4', f.columns === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
-              <FieldRenderer fields={f.fields} value={value} onChange={onChange} errors={errors} prefix={prefix} />
+              <FieldRenderer bare fields={f.fields} value={value} onChange={onChange} errors={errors} prefix={prefix} />
             </div>
           );
         }
         return <Field key={f.name} def={f} value={value[f.name]} onChange={(v) => set(f.name, v)} error={errors[prefix + f.name]} errors={errors} path={prefix + f.name} />;
       })}
-    </div>
+    </Wrap>
   );
 }
 
@@ -140,6 +142,8 @@ function Field({ def, value, onChange, error, errors, path }: { def: Exclude<Adm
       return <CtaEditor label={def.label} value={(value as Cta[]) ?? []} onChange={onChange} max={def.max ?? 3} />;
     case 'list':
       return <ListEditor def={def} value={(value as Values[]) ?? []} onChange={onChange} errors={errors} path={path} />;
+    case 'blocks':
+      return <InlineBlocks label={def.label} help={help} value={(value as Block[]) ?? []} onChange={onChange} />;
   }
 }
 
@@ -314,6 +318,50 @@ function ListEditor({ def, value, onChange, errors, path }: { def: Extract<Field
           Add {def.itemLabel.toLowerCase()}
         </Button>
       )}
+    </FieldShell>
+  );
+}
+
+/** Compact block list for entities that carry a few extra sections (e.g. a destination's season chart). */
+function InlineBlocks({ label, help, value, onChange }: { label: string; help?: string; value: Block[]; onChange: (v: Block[]) => void }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const [adding, setAdding] = useState('');
+  return (
+    <FieldShell label={label} hint={help}>
+      <ol className="grid gap-1.5">
+        {value.map((b, i) => {
+          const def = BLOCK_MAP[b.type];
+          return (
+            <li key={b.id} className="rounded-[10px] border border-line">
+              <div className="flex items-center gap-2 px-3 py-2">
+                <button type="button" className="flex-1 text-left text-[13px] font-medium" onClick={() => setOpen(open === b.id ? null : b.id)}>
+                  {def?.label ?? b.type} <span className="text-fg-subtle">· {(b.data.heading as LText | undefined)?.en ?? ''}</span>
+                </button>
+                <button type="button" onClick={() => onChange(value.filter((_, k) => k !== i))} className="grid size-7 place-items-center rounded text-fg-subtle hover:bg-danger/10 hover:text-danger" aria-label="Remove block"><Trash2 className="size-3.5" /></button>
+              </div>
+              {open === b.id && def && (
+                <div className="border-t border-line p-3">
+                  <FieldRenderer fields={def.fields} value={b.data as Values} onChange={(data) => onChange(value.map((x) => (x.id === b.id ? { ...x, data } : x)))} />
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      <div className="mt-1 flex gap-2">
+        <select className="input !w-auto" value={adding} onChange={(e) => setAdding(e.target.value)} aria-label="Block type">
+          <option value="">Add a section…</option>
+          {BLOCKS.filter((b) => !b.later && b.type !== 'hero').map((b) => (
+            <option key={b.type} value={b.type}>{b.label}</option>
+          ))}
+        </select>
+        <Button size="sm" disabled={!adding} onClick={() => {
+          const b: Block = { id: `${adding}-${Math.random().toString(36).slice(2, 8)}`, type: adding, variant: BLOCK_MAP[adding]?.variants?.[0]?.value, data: {} };
+          onChange([...value, b]);
+          setOpen(b.id);
+          setAdding('');
+        }}>Add</Button>
+      </div>
     </FieldShell>
   );
 }

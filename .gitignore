@@ -1,7 +1,13 @@
 node_modules
 .env
+.env.*
+!.env.example
 .turbo
 .next
 dist
 coverage
 *.log
+*.tsbuildinfo
+next-env.d.ts
+packages/db/src/generated
+storage

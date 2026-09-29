@@ -1,0 +1,671 @@
+// Reberon Hotel Suite — Movement I schema (+ Room, AuditLog reserved early).
+// See docs/planning/03-data-model.md. Enums mirror packages/contracts/src/enums.ts.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────── Platform (M22) ─────────────────────────
+
+enum Role {
+  OWNER
+  MANAGER
+  DESK
+  HOUSEKEEPING
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+model User {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  email        String     @unique
+  name         String
+  phone        String?
+  passwordHash String?
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  avatarId     String?    @db.Uuid
+  lastLoginAt  DateTime?
+  failedLogins Int        @default(0)
+  lockedUntil  DateTime?
+  isSeed       Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  avatar       MediaAsset?        @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
+  sessions     Session[]
+  tokens       UserToken[]
+  auditLogs    AuditLog[]
+  uploads      MediaAsset[]       @relation("MediaUploader")
+  assigned     Conversation[]     @relation("ConversationAssignee")
+  messages     Message[]
+  pageVersions PageVersion[]
+  pagesUpdated Page[]             @relation("PageUpdatedBy")
+  lastReads    ConversationRead[]
+}
+
+model Session {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  userId           String    @db.Uuid
+  refreshTokenHash String    @unique
+  family           String    @db.Uuid
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([family])
+}
+
+enum UserTokenKind {
+  INVITE
+  PASSWORD_RESET
+}
+
+model UserToken {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  userId    String        @db.Uuid
+  kind      UserTokenKind
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum SettingGroup {
+  GENERAL
+  CONTACT
+  BOOKING
+  SEO
+  FEATURES
+  NOTIFICATIONS
+}
+
+model Setting {
+  key         String       @id
+  value       Json
+  group       SettingGroup
+  updatedById String?      @db.Uuid
+  updatedAt   DateTime     @updatedAt
+}
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+enum MediaStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+model MediaAsset {
+  id            String      @id @default(uuid(7)) @db.Uuid
+  kind          MediaKind   @default(IMAGE)
+  status        MediaStatus @default(PROCESSING)
+  storageKey    String
+  originalName  String
+  mimeType      String
+  bytes         Int
+  width         Int?
+  height        Int?
+  lqip          String?
+  dominantColor String?
+  focalX        Float       @default(0.5)
+  focalY        Float       @default(0.5)
+  alt           Json        @default("{}")
+  caption       Json?
+  credit        String?
+  isRendering   Boolean     @default(false)
+  variants      Json        @default("[]")
+  folder        String?
+  tags          String[]    @default([])
+  uploadedById  String?     @db.Uuid
+  isSeed        Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+
+  uploadedBy        User?         @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  avatarOf          User[]        @relation("UserAvatar")
+  roomTypeHeroes    RoomType[]    @relation("RoomTypeHero")
+  roomTypePlans     RoomType[]    @relation("RoomTypeFloorPlan")
+  destinationHeroes Destination[] @relation("DestinationHero")
+
+  @@index([folder])
+  @@index([createdAt])
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  GUEST
+  WEBHOOK
+}
+
+model AuditLog {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  actorId    String?   @db.Uuid
+  actorType  ActorType @default(USER)
+  action     String
+  entityType String
+  entityId   String?
+  summary    String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  isSeed     Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ───────────────────────── Content engine (M01) ─────────────────────────
+
+enum PageKind {
+  HOME
+  STANDARD
+  ABOUT
+  FACILITIES
+  CONTACT
+  LEGAL
+  DESTINATION_INDEX
+  ROOMS_INDEX
+  PROGRESS
+  LANDING
+  SYSTEM
+}
+
+enum PageStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+model Page {
+  id                 String     @id @default(uuid(7)) @db.Uuid
+  slug               String     @unique
+  kind               PageKind   @default(STANDARD)
+  title              Json
+  status             PageStatus @default(DRAFT)
+  draftBlocks        Json       @default("[]")
+  draftSeo           Json       @default("{}")
+  draftVersion       Int        @default(1)
+  publishedVersionId String?    @unique @db.Uuid
+  publishAt          DateTime?
+  updatedById        String?    @db.Uuid
+  isSeed             Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  deletedAt          DateTime?
+
+  publishedVersion PageVersion?  @relation("PublishedVersion", fields: [publishedVersionId], references: [id], onDelete: SetNull)
+  versions         PageVersion[] @relation("PageVersions")
+  updatedBy        User?         @relation("PageUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+model PageVersion {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  pageId        String   @db.Uuid
+  version       Int
+  title         Json
+  blocks        Json
+  seo           Json
+  publishedById String?  @db.Uuid
+  publishedAt   DateTime @default(now())
+
+  page        Page  @relation("PageVersions", fields: [pageId], references: [id], onDelete: Cascade)
+  publishedOf Page? @relation("PublishedVersion")
+  publishedBy User? @relation(fields: [publishedById], references: [id], onDelete: SetNull)
+
+  @@unique([pageId, version])
+}
+
+enum NavMenuKey {
+  HEADER
+  FOOTER_PRIMARY
+  FOOTER_LEGAL
+  MOBILE
+}
+
+enum NavTarget {
+  PAGE
+  ROOM_TYPE
+  DESTINATION
+  URL
+}
+
+model NavigationItem {
+  id        String     @id @default(uuid(7)) @db.Uuid
+  menu      NavMenuKey
+  parentId  String?    @db.Uuid
+  label     Json
+  target    NavTarget
+  targetId  String?    @db.Uuid
+  url       String?
+  order     Int        @default(0)
+  isVisible Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  parent   NavigationItem?  @relation("NavTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children NavigationItem[] @relation("NavTree")
+
+  @@index([menu, order])
+}
+
+model Redirect {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  fromPath   String   @unique
+  toPath     String
+  statusCode Int      @default(301)
+  hits       Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model FaqGroup {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  key       String    @unique
+  title     Json
+  isSeed    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  items     FaqItem[]
+}
+
+model FaqItem {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  groupId     String   @db.Uuid
+  question    Json
+  answer      Json
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  isSeed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  group FaqGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, order])
+}
+
+enum FacilityStatus {
+  AVAILABLE
+  COMING_SOON
+  HIDDEN
+}
+
+model Facility {
+  id        String         @id @default(uuid(7)) @db.Uuid
+  slug      String         @unique
+  name      Json
+  summary   Json           @default("{}")
+  body      Json?
+  icon      String
+  mediaIds  String[]       @default([])
+  status    FacilityStatus @default(AVAILABLE)
+  order     Int            @default(0)
+  isSeed    Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  deletedAt DateTime?
+}
+
+enum Milestone {
+  GROUNDBREAKING
+  FOUNDATION
+  STRUCTURE
+  ROOF
+  FINISHES
+  FURNISHING
+  OPENING
+}
+
+enum PublishState {
+  DRAFT
+  PUBLISHED
+}
+
+model ProgressUpdate {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  slug            String       @unique
+  title           Json
+  body            Json?
+  happenedOn      DateTime     @db.Date
+  milestone       Milestone?
+  percentComplete Int?         @db.SmallInt
+  mediaIds        String[]     @default([])
+  status          PublishState @default(DRAFT)
+  isSeed          Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+
+  @@index([status, happenedOn])
+}
+
+model Testimonial {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  author      String
+  origin      String?
+  text        Json
+  rating      Int?     @db.SmallInt
+  isPublished Boolean  @default(false)
+  isSeed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ───────────────────────── Rooms catalogue (M02) ─────────────────────────
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  HIDDEN
+}
+
+enum AmenityCategory {
+  COMFORT
+  BATH
+  TECH
+  VIEW
+  ACCESS
+}
+
+model RoomType {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  slug             String        @unique
+  name             Json
+  tagline          Json          @default("{}")
+  description      Json?
+  sleepsAdults     Int           @db.SmallInt
+  sleepsChildren   Int           @default(0) @db.SmallInt
+  bedConfig        Json          @default("{}")
+  sizeSqm          Int?          @db.SmallInt
+  view             Json?
+  heroMediaId      String?       @db.Uuid
+  galleryIds       String[]      @default([])
+  floorPlanMediaId String?       @db.Uuid
+  fromPriceUgx     BigInt?
+  fromPriceUsd     BigInt?
+  order            Int           @default(0)
+  status           ContentStatus @default(DRAFT)
+  seo              Json          @default("{}")
+  isSeed           Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  deletedAt        DateTime?
+
+  hero      MediaAsset?       @relation("RoomTypeHero", fields: [heroMediaId], references: [id], onDelete: SetNull)
+  floorPlan MediaAsset?       @relation("RoomTypeFloorPlan", fields: [floorPlanMediaId], references: [id], onDelete: SetNull)
+  amenities RoomTypeAmenity[]
+  rooms     Room[]
+  waitlist  WaitlistEntry[]
+}
+
+model Amenity {
+  id        String            @id @default(uuid(7)) @db.Uuid
+  key       String            @unique
+  name      Json
+  icon      String
+  category  AmenityCategory
+  order     Int               @default(0)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  roomTypes RoomTypeAmenity[]
+}
+
+model RoomTypeAmenity {
+  roomTypeId String @db.Uuid
+  amenityId  String @db.Uuid
+  order      Int    @default(0)
+
+  roomType RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  amenity  Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([roomTypeId, amenityId])
+}
+
+enum HkStatus {
+  VACANT_CLEAN
+  VACANT_DIRTY
+  OCCUPIED
+  INSPECTED
+  BLOCKED
+  OUT_OF_ORDER
+}
+
+/// Physical rooms. Screens arrive in Movement IV; the table exists now so
+/// inventory can derive from it in Movement II.
+model Room {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  number     String   @unique
+  floor      Int      @db.SmallInt
+  roomTypeId String   @db.Uuid
+  hkStatus   HkStatus @default(VACANT_CLEAN)
+  isActive   Boolean  @default(true)
+  notes      String?
+  isSeed     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  roomType RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+}
+
+// ───────────────────────── Destination (M03) ─────────────────────────
+
+enum DestinationKind {
+  PLACE
+  ROUTE
+  THEME
+  SEASON
+  PRACTICAL
+}
+
+model Destination {
+  id           String          @id @default(uuid(7)) @db.Uuid
+  slug         String          @unique
+  kind         DestinationKind
+  name         Json
+  tagline      Json            @default("{}")
+  body         Json?
+  blocks       Json            @default("[]")
+  heroMediaId  String?         @db.Uuid
+  galleryIds   String[]        @default([])
+  lat          Float?
+  lng          Float?
+  distanceKm   Int?
+  driveMinutes Int?
+  order        Int             @default(0)
+  status       ContentStatus   @default(DRAFT)
+  seo          Json            @default("{}")
+  isSeed       Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  deletedAt    DateTime?
+
+  hero  MediaAsset? @relation("DestinationHero", fields: [heroMediaId], references: [id], onDelete: SetNull)
+  stops RouteStop[]
+}
+
+model RouteStop {
+  id              String @id @default(uuid(7)) @db.Uuid
+  destinationId   String @db.Uuid
+  order           Int
+  name            Json
+  note            Json?
+  minutesFromPrev Int?
+  altitude        Int?
+  lat             Float?
+  lng             Float?
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@index([destinationId, order])
+}
+
+// ───────────────────────── Inbox, WhatsApp desk, waitlist (M19 / M10 / M11) ─────────────────────────
+
+enum ContactSource {
+  WEB
+  WHATSAPP
+  EMAIL
+  PHONE
+  WALK_IN
+}
+
+model Contact {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  name          String
+  phone         String?
+  email         String?
+  country       String?
+  whatsappOptIn Boolean       @default(false)
+  source        ContactSource @default(WEB)
+  isSeed        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  conversations Conversation[]
+  waitlist      WaitlistEntry[]
+
+  @@index([phone])
+  @@index([email])
+}
+
+enum Channel {
+  WEB_FORM
+  WHATSAPP
+  EMAIL
+  PHONE
+}
+
+enum ConversationStatus {
+  NEW
+  OPEN
+  WAITING_GUEST
+  DONE
+  SPAM
+}
+
+enum Intent {
+  STAY
+  EVENT
+  GROUP
+  GENERAL
+  WAITLIST
+}
+
+model Conversation {
+  id            String             @id @default(uuid(7)) @db.Uuid
+  reference     String             @unique
+  contactId     String             @db.Uuid
+  channel       Channel
+  intent        Intent             @default(GENERAL)
+  status        ConversationStatus @default(NEW)
+  subject       String?
+  assigneeId    String?            @db.Uuid
+  context       Json               @default("{}")
+  lastMessageAt DateTime           @default(now())
+  isSeed        Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  contact  Contact            @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  assignee User?              @relation("ConversationAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  messages Message[]
+  reads    ConversationRead[]
+
+  @@index([status, lastMessageAt])
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+  NOTE
+}
+
+model Message {
+  id               String           @id @default(uuid(7)) @db.Uuid
+  conversationId   String           @db.Uuid
+  direction        MessageDirection
+  body             String
+  authorId         String?          @db.Uuid
+  channelMessageId String?
+  deliveryStatus   String?
+  createdAt        DateTime         @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author       User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+}
+
+model ConversationRead {
+  conversationId String   @db.Uuid
+  userId         String   @db.Uuid
+  readAt         DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+}
+
+enum WaitlistStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  DECLINED
+  EXPIRED
+}
+
+model WaitlistEntry {
+  id            String         @id @default(uuid(7)) @db.Uuid
+  reference     String         @unique
+  contactId     String         @db.Uuid
+  roomTypeId    String?        @db.Uuid
+  preferredFrom DateTime?      @db.Date
+  preferredTo   DateTime?      @db.Date
+  flexibleDates Boolean        @default(false)
+  adults        Int            @default(2) @db.SmallInt
+  children      Int            @default(0) @db.SmallInt
+  note          String?
+  staffNotes    String?
+  status        WaitlistStatus @default(NEW)
+  priority      Int            @default(0) @db.SmallInt
+  isSeed        Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  contact  Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  roomType RoomType? @relation(fields: [roomTypeId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}

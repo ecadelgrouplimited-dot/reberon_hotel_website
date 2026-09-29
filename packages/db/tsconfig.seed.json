@@ -1,0 +1,5 @@
+{
+  "extends": "@reberon/config/tsconfig.base.json",
+  "compilerOptions": { "noEmit": true, "types": ["node"], "rootDir": "." },
+  "include": ["seed", "src", "prisma.config.ts"]
+}

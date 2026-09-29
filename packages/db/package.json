@@ -1,0 +1,41 @@
+{
+  "name": "@reberon/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": {
+    "generate": "prisma generate",
+    "build": "prisma generate && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "tsx seed/index.ts",
+    "seed:ref": "tsx seed/index.ts --reference-only",
+    "purge-demo": "tsx seed/purge.ts",
+    "reset": "prisma migrate reset --force && tsx seed/index.ts",
+    "studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.0.0",
+    "@reberon/config": "workspace:*",
+    "@reberon/contracts": "workspace:*",
+    "@reberon/media": "workspace:*",
+    "@reberon/utils": "workspace:*",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.0",
+    "argon2": "^0.45.1",
+    "dotenv": "^17.0.0",
+    "prisma": "7.10.0",
+    "sharp": "^0.35.5",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3"
+  }
+}

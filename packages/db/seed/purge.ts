@@ -1,0 +1,28 @@
+import { prisma, storage } from './lib.js';
+import { mediaKeys } from '@reberon/media';
+
+/** Remove every demo row (isSeed = true). Reference data stays. Run before launch. */
+async function main() {
+  const media = await prisma.mediaAsset.findMany({ where: { isSeed: true }, select: { id: true } });
+  const counts = await prisma.$transaction([
+    prisma.auditLog.deleteMany({ where: { isSeed: true } }),
+    prisma.waitlistEntry.deleteMany({ where: { isSeed: true } }),
+    prisma.conversation.deleteMany({ where: { isSeed: true } }),
+    prisma.contact.deleteMany({ where: { isSeed: true } }),
+    prisma.navigationItem.deleteMany({}),
+    prisma.page.deleteMany({ where: { isSeed: true } }),
+    prisma.faqGroup.deleteMany({ where: { isSeed: true } }),
+    prisma.progressUpdate.deleteMany({ where: { isSeed: true } }),
+    prisma.destination.deleteMany({ where: { isSeed: true } }),
+    prisma.facility.deleteMany({ where: { isSeed: true } }),
+    prisma.room.deleteMany({ where: { isSeed: true } }),
+    prisma.roomType.deleteMany({ where: { isSeed: true } }),
+    prisma.testimonial.deleteMany({ where: { isSeed: true } }),
+    prisma.mediaAsset.deleteMany({ where: { isSeed: true } }),
+  ]);
+  for (const m of media) await storage.remove(mediaKeys.variant(m.id, 0).replace(/\/0\.webp$/, ''));
+  console.log('Purged demo rows:', counts.map((c) => c.count).reduce((a, b) => a + b, 0), `(and ${media.length} media folders)`);
+  console.log('Seed users are kept so you can still sign in; disable them in Settings → Users.');
+}
+
+main().finally(() => prisma.$disconnect());

@@ -1,0 +1,77 @@
+import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import type { Request, Response } from 'express';
+import { zLoginInput, zForgotInput, zResetInput, zAcceptInviteInput, zChangePasswordInput } from '@reberon/contracts';
+import type { z } from 'zod';
+import { PrismaService } from '../../common/prisma.service.js';
+import { CurrentUser, Public, REFRESH_COOKIE, type AuthUser } from '../../common/auth.js';
+import { ZodPipe } from '../../common/zod.pipe.js';
+import { AuthService } from './auth.service.js';
+
+@Controller('v1/admin/auth')
+export class AuthController {
+  constructor(
+    private readonly auth: AuthService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  @Public()
+  @Post('login')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 8, ttl: 15 * 60_000 } })
+  login(@Body(new ZodPipe(zLoginInput)) body: z.infer<typeof zLoginInput>, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.auth.login(body.email, body.password, req, res);
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(200)
+  refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.auth.refresh(req.cookies?.[REFRESH_COOKIE], req, res);
+  }
+
+  @Public()
+  @Post('logout')
+  @HttpCode(204)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    await this.auth.logout(req.cookies?.[REFRESH_COOKIE], res);
+  }
+
+  @Public()
+  @Post('forgot')
+  @HttpCode(202)
+  @Throttle({ default: { limit: 3, ttl: 15 * 60_000 } })
+  async forgot(@Body(new ZodPipe(zForgotInput)) body: z.infer<typeof zForgotInput>, @Req() req: Request) {
+    await this.auth.forgot(body.email, req);
+    return { ok: true };
+  }
+
+  @Public()
+  @Post('reset')
+  @HttpCode(200)
+  async reset(@Body(new ZodPipe(zResetInput)) body: z.infer<typeof zResetInput>, @Req() req: Request) {
+    await this.auth.consumeToken(body.token, 'PASSWORD_RESET', body.password, req);
+    return { ok: true };
+  }
+
+  @Public()
+  @Post('accept-invite')
+  @HttpCode(200)
+  async acceptInvite(@Body(new ZodPipe(zAcceptInviteInput)) body: z.infer<typeof zAcceptInviteInput>, @Req() req: Request) {
+    await this.auth.consumeToken(body.token, 'INVITE', body.password, req);
+    return { ok: true };
+  }
+
+  @Get('me')
+  async me(@CurrentUser() user: AuthUser) {
+    const u = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    return this.auth.me(u);
+  }
+
+  @Post('password')
+  @HttpCode(200)
+  async changePassword(@Body(new ZodPipe(zChangePasswordInput)) body: z.infer<typeof zChangePasswordInput>, @CurrentUser() user: AuthUser, @Req() req: Request) {
+    await this.auth.changePassword(user.id, body.currentPassword, body.newPassword, req);
+    return { ok: true };
+  }
+}

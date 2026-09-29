@@ -1,0 +1,23 @@
+import { Module } from '@nestjs/common';
+import { ResolverService } from './resolver.service.js';
+import { SettingsService } from './settings.service.js';
+import { PagesService } from './pages.service.js';
+import { PublicContentController } from './public.controller.js';
+import { PagesAdminController } from './pages.admin.controller.js';
+import {
+  ContentOps, RoomsAdminController, FacilitiesAdminController, DestinationsAdminController, ProgressAdminController,
+  FaqAdminController, SiteStructureAdminController,
+} from './catalog.admin.controller.js';
+import { SettingsAdminController } from './settings.admin.controller.js';
+import { RevalidationListener } from './revalidation.listener.js';
+import { SchedulerService } from './scheduler.service.js';
+
+@Module({
+  controllers: [
+    PublicContentController, PagesAdminController, RoomsAdminController, FacilitiesAdminController, DestinationsAdminController,
+    ProgressAdminController, FaqAdminController, SiteStructureAdminController, SettingsAdminController,
+  ],
+  providers: [ResolverService, SettingsService, PagesService, ContentOps, RevalidationListener, SchedulerService],
+  exports: [ResolverService, SettingsService],
+})
+export class ContentModule {}

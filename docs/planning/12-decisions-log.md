@@ -15,11 +15,11 @@
 | ADR-009 | 2026-09-29 | Own auth (argon2id + rotating refresh) instead of a vendor | Few users, full control, audit in one place | Accepted |
 | ADR-010 | 2026-09-29 | Seed placeholder imagery generated locally in brand palette; real photos replace via media library | No licensing risk, no network dependency, honest | Accepted |
 | ADR-011 | 2026-09-29 | Cloudflare Turnstile for public forms | Free, no puzzles for guests on phones | Proposed |
-| ADR-013 | 2026-09-29 | Web reveals use CSS scroll-driven animations (`animation-timeline: view()`); an IntersectionObserver fallback runs after hydration only where unsupported | Zero JS for motion in modern browsers, no hydration mismatches, content never hidden waiting for JS |
-| ADR-014 | 2026-09-29 | JS budget revised to ≤170 KB total / ≤30 KB app code | The React 19 + Next 16 runtime alone is ~150 KB compressed; the original 110 KB target was unattainable. Browser code must import `@reberon/contracts/text`, never the Zod entry |
-| ADR-015 | 2026-09-29 | Local-disk media storage in dev (MinIO deferred); `StorageDriver` interface keeps S3 a drop-in | Fewer moving parts locally |
-| ADR-016 | 2026-09-29 | Public API returns localized objects (`{en: …}`); the website resolves the locale | One cached response serves every locale |
 | ADR-012 | 2026-09-29 | Tables for `Room` and `AuditLog` created in Movement I | Cheap now, avoids painful backfills later | Accepted |
+| ADR-013 | 2026-09-29 | Web reveals use CSS scroll-driven animations (`animation-timeline: view()`); an IntersectionObserver fallback runs after hydration only where unsupported | Zero JS for motion in modern browsers, no hydration mismatches, content never hidden waiting for JS | Accepted |
+| ADR-014 | 2026-09-29 | JS budget revised to ≤170 KB total / ≤30 KB app code | The React 19 + Next 16 runtime alone is ~150 KB compressed; the original 110 KB target was unattainable. Browser code must import `@reberon/contracts/text`, never the Zod entry | Accepted |
+| ADR-015 | 2026-09-29 | Local-disk media storage in dev (MinIO deferred); `StorageDriver` interface keeps S3 a drop-in | Fewer moving parts locally | Accepted |
+| ADR-016 | 2026-09-29 | Public API returns localized objects (`{en: …}`); the website resolves the locale | One cached response serves every locale | Accepted |
 
 ## Open questions (need answers from Denis / Wilson)
 

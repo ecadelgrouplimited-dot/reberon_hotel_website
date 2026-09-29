@@ -26,12 +26,12 @@ export function Pill({ tone = 'neutral', children, dot, className }: { tone?: To
 export const STATUS_TONE: Record<string, Tone> = {
   PUBLISHED: 'green', AVAILABLE: 'green', ACTIVE: 'green', DONE: 'neutral', READY: 'green', CONVERTED: 'green',
   DRAFT: 'amber', SCHEDULED: 'blue', COMING_SOON: 'amber', PROCESSING: 'blue', INVITED: 'blue', WAITING_GUEST: 'blue', CONTACTED: 'blue',
-  NEW: 'red', OPEN: 'amber', HIDDEN: 'neutral', ARCHIVED: 'neutral', DISABLED: 'neutral', SPAM: 'neutral', DECLINED: 'neutral', EXPIRED: 'neutral', FAILED: 'red',
+  NEW: 'red', OPEN: 'amber', HELD: 'amber', CONFIRMED: 'green', IN_HOUSE: 'blue', CHECKED_OUT: 'neutral', NO_SHOW: 'red', SUCCEEDED: 'green', PENDING: 'amber', REFUNDED: 'neutral', HIDDEN: 'neutral', ARCHIVED: 'neutral', DISABLED: 'neutral', SPAM: 'neutral', DECLINED: 'neutral', EXPIRED: 'neutral', FAILED: 'red',
 };
 export const STATUS_LABEL: Record<string, string> = {
   WAITING_GUEST: 'Waiting on guest', COMING_SOON: 'Being built', NEW: 'New', OPEN: 'Open', DONE: 'Done', SPAM: 'Spam', DRAFT: 'Draft',
   PUBLISHED: 'Published', SCHEDULED: 'Scheduled', HIDDEN: 'Hidden', AVAILABLE: 'Available', CONTACTED: 'Contacted', CONVERTED: 'Converted',
-  DECLINED: 'Declined', EXPIRED: 'Expired', ACTIVE: 'Active', INVITED: 'Invited', DISABLED: 'Disabled', ARCHIVED: 'Archived', READY: 'Ready', PROCESSING: 'Processing', FAILED: 'Failed',
+  DECLINED: 'Declined', EXPIRED: 'Expired', HELD: 'Awaiting payment', CONFIRMED: 'Confirmed', CANCELLED: 'Cancelled', IN_HOUSE: 'In house', CHECKED_OUT: 'Checked out', NO_SHOW: 'No-show', SUCCEEDED: 'Paid', PENDING: 'Pending', REFUNDED: 'Refunded', ACTIVE: 'Active', INVITED: 'Invited', DISABLED: 'Disabled', ARCHIVED: 'Archived', READY: 'Ready', PROCESSING: 'Processing', FAILED: 'Failed',
 };
 
 export function Status({ value }: { value: string }) {

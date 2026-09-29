@@ -175,6 +175,9 @@ function EntryDrawer({ id, onClose }: { id: string | null; onClose: () => void }
             <blockquote className="rounded-xl border-l-2 border-accent bg-surface-2/60 px-4 py-3 text-[13.5px] italic text-fg-muted">“{w.note}”</blockquote>
           )}
           <div className="flex flex-wrap gap-2">
+            {can('bookings:write') && w.status !== 'CONVERTED' && (
+              <a className={buttonClass('dark')} href={`/reservations/new?waitlist=${w.id}`}>Convert to reservation</a>
+            )}
             {w.contact.phone && (
               <>
                 <a className={buttonClass('primary')} target="_blank" rel="noopener noreferrer" href={whatsappLink(w.contact.phone, `Hello ${w.contact.name.split(' ')[0]}, this is Reberon Hotel about your first stay (${w.reference}).`)}>

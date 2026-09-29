@@ -8,6 +8,6 @@ export async function GET(req: Request) {
   const path = url.searchParams.get('path') ?? '/';
   if (!token || !/^\d+\.[\w-]+$/.test(token)) return new Response('Invalid preview link', { status: 401 });
   (await draftMode()).enable();
-  (await cookies()).set('rb_preview', token, { httpOnly: true, sameSite: 'none', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 3600 });
+  (await cookies()).set('rb_preview', token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 3600 });
   redirect(path.startsWith('/') && !path.startsWith('//') ? path : '/');
 }

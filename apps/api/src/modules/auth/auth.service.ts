@@ -7,7 +7,7 @@ import type { User } from '@reberon/db';
 import { PrismaService } from '../../common/prisma.service.js';
 import { AuditService } from '../../common/audit.service.js';
 import { AppError, badRequest, unauthorized } from '../../common/errors.js';
-import { ACCESS_COOKIE, ACCESS_TTL_SECONDS, REFRESH_COOKIE, signAccessToken } from '../../common/auth.js';
+import { ACCESS_COOKIE, ACCESS_TTL_SECONDS, REFRESH_COOKIE, SESSION_HINT_COOKIE, signAccessToken } from '../../common/auth.js';
 import { env } from '../../config.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { hashToken, newToken } from './tokens.js';
@@ -48,11 +48,14 @@ export class AuthService {
     const access = await signAccessToken(user);
     res.cookie(ACCESS_COOKIE, access, this.cookieOpts(ACCESS_TTL_SECONDS * 1000));
     res.cookie(REFRESH_COOKIE, refresh, this.cookieOpts(REFRESH_TTL_MS, '/v1/admin/auth'));
+    // Not a credential: only tells the admin app's router that a session probably exists.
+    res.cookie(SESSION_HINT_COOKIE, '1', { ...this.cookieOpts(REFRESH_TTL_MS), httpOnly: false });
   }
 
   clear(res: Response) {
     res.clearCookie(ACCESS_COOKIE, { path: '/' });
     res.clearCookie(REFRESH_COOKIE, { path: '/v1/admin/auth' });
+    res.clearCookie(SESSION_HINT_COOKIE, { path: '/' });
   }
 
   async login(email: string, password: string, req: Request, res: Response): Promise<MeDTO> {

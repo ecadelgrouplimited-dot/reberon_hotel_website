@@ -9,6 +9,7 @@ import { PrismaService } from './prisma.service.js';
 
 export const ACCESS_COOKIE = 'rb_at';
 export const REFRESH_COOKIE = 'rb_rt';
+export const SESSION_HINT_COOKIE = 'rb_session';
 export const ACCESS_TTL_SECONDS = 15 * 60;
 
 const key = new TextEncoder().encode(env.JWT_SECRET);

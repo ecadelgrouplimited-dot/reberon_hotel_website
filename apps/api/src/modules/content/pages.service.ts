@@ -3,7 +3,9 @@ import { randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { AdminPageDTO, AdminPageSummaryDTO, Block, SeoDTO } from '@reberon/contracts';
-import { zPageCreateInput, zPageUpdateInput } from '@reberon/contracts';
+import { zPageCreateInput, zPageUpdateInput, zBlocks, BLOCK_MAP } from '@reberon/contracts';
+import { HttpStatus } from '@nestjs/common';
+import { AppError } from '../../common/errors.js';
 import type { z } from 'zod';
 import type { Page, PageVersion, User } from '@reberon/db';
 import { PrismaService } from '../../common/prisma.service.js';
@@ -127,9 +129,30 @@ export class PagesService {
     });
   }
 
+  /** Strict check before anything goes live: names the block and field that need attention. */
+  private validateForPublish(blocks: unknown) {
+    const res = zBlocks.safeParse(blocks);
+    if (res.success) return;
+    const list = blocks as { type?: string }[];
+    throw new AppError(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'VALIDATION_FAILED',
+      'Some blocks are incomplete. Fix them before publishing.',
+      res.error.issues.map((i) => {
+        const idx = Number(i.path[0]);
+        const def = BLOCK_MAP[list[idx]?.type ?? ''];
+        const field = def?.fields.find((f) => f.name === i.path[2]);
+        const missing = /received undefined|expected record|too small|>=1 character/i.test(i.message);
+        const message = field ? (missing ? `“${field.label}” is required` : `“${field.label}”: ${i.message}`) : i.message;
+        return { path: i.path.join('.'), message: `${def?.label ?? 'Block'} (#${idx + 1}): ${message}` };
+      }),
+    );
+  }
+
   async publish(id: string, publishAt: string | null | undefined, user: AuthUser, req: Request) {
     const p = await this.find(id);
     if (!p) throw notFound('Page');
+    this.validateForPublish(p.draftBlocks);
     if (publishAt && new Date(publishAt) > new Date()) {
       await this.prisma.page.update({ where: { id }, data: { status: 'SCHEDULED', publishAt: new Date(publishAt) } });
       await this.audit.record({ actor: user, action: 'page.schedule', entityType: 'Page', entityId: id, summary: `Scheduled /${p.slug} for ${publishAt}`, req });

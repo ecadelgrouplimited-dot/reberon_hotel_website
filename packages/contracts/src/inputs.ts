@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { zLText, zLRich } from './localized.js';
-import { zBlocks } from './blocks.js';
+import { zBlocks, zBlockDrafts } from './blocks.js';
 import {
   ROLES, PAGE_KINDS, CONTENT_STATUSES, FACILITY_STATUSES, MILESTONES, DESTINATION_KINDS, AMENITY_CATEGORIES,
   CONVERSATION_STATUSES, INTENTS, WAITLIST_STATUSES, NAV_TARGETS, CHANNELS,
@@ -107,7 +107,7 @@ export const zPageCreateInput = z.object({
 export const zPageUpdateInput = z.object({
   title: zLText.optional(),
   slug: z.string().optional(),
-  blocks: zBlocks.optional(),
+  blocks: zBlockDrafts.optional(),
   seo: zSeoInput.optional(),
 });
 export const zPublishInput = z.object({ publishAt: z.string().datetime().nullable().optional() });

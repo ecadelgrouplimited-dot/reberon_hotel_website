@@ -398,6 +398,18 @@ export const zBlock = z
 export type Block = z.infer<typeof zBlock>;
 export const zBlocks = z.array(zBlock);
 
+/** Drafts may be incomplete while someone is editing; strict validation happens at publish. */
+export const zBlockDraft = z.object({
+  id: z.string().min(1),
+  type: z.string().refine((v) => v in BLOCK_MAP, 'Unknown block type'),
+  variant: z.string().optional(),
+  hidden: z.boolean().optional(),
+  anchor: z.string().optional(),
+  tone: z.enum(['default', 'warm', 'dark', 'moss']).optional(),
+  data: z.record(z.string(), z.unknown()),
+});
+export const zBlockDrafts = z.array(zBlockDraft).max(80);
+
 /** Media IDs referenced anywhere inside a block's data. */
 export function collectMediaIds(block: Block): string[] {
   const def = BLOCK_MAP[block.type];

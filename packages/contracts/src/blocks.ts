@@ -243,6 +243,23 @@ export const BLOCKS: BlockDefinition[] = [
     ],
   },
   {
+    type: 'nowStrip',
+    label: 'Kapchorwa now',
+    description: 'Live local time, weather, sunrise and sunset on the mountain.',
+    icon: 'cloud-sun',
+    variants: [
+      { value: 'band', label: 'Full-width band' },
+      { value: 'card', label: 'Card' },
+    ],
+    fields: [
+      eyebrow,
+      heading(),
+      intro,
+      { kind: 'boolean', name: 'showForecast', label: 'Show the next three days' },
+      { kind: 'boolean', name: 'compareKampala', label: 'Compare with Kampala (“7° cooler than Kampala”)' },
+    ],
+  },
+  {
     type: 'quote',
     label: 'Quote',
     description: 'A line worth pausing on.',

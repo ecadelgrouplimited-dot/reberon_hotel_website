@@ -7,6 +7,7 @@ import { Story, Stats, RoomGrid, RoomSpotlight, Facilities, Features } from './c
 import { ProgressTimeline, DestinationCards, JourneyBlock, SeasonStrip } from './place';
 import { Quote, Faq, ContactCard, MapBlock, FormBlock, CtaBand, RichTextBlock, Spacer } from './closing';
 import { GalleryGrid } from './gallery';
+import { NowStrip } from './now-strip';
 import type { BlockProps } from './types';
 
 function Gallery({ block, media }: BlockProps<{ eyebrow?: LText; heading?: LText; media?: string[] }>) {
@@ -41,10 +42,11 @@ const REGISTRY: Record<string, (p: BlockProps<never, never>) => React.ReactNode>
   ctaBand: CtaBand as never,
   richText: RichTextBlock as never,
   spacer: Spacer as never,
+  nowStrip: NowStrip as never,
 };
 
 /** Blocks that manage their own vertical rhythm (full-bleed or spacing). */
-const BLEED = new Set(['hero', 'quote', 'spacer']);
+const BLEED = new Set(['hero', 'quote', 'spacer', 'nowStrip']);
 
 export function Blocks({ page, site, ctx = {} }: { page: Pick<PageDTO, 'blocks' | 'media'>; site: SiteDTO; ctx?: CtaContext }) {
   return (

@@ -1,17 +1,16 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ViewTransition } from 'react';
 import { ArrowLeft, Clock } from 'lucide-react';
 import type { AmenityCategory } from '@reberon/contracts';
 import { t } from '@reberon/contracts';
 import { api, orNull } from '@/lib/api';
 import { buildMetadata, JsonLd, WEB_URL } from '@/lib/seo';
-import { MediaImage } from '@/components/ui/media-image';
 import { RichText } from '@/components/ui/rich-text';
 import { Icon } from '@/components/ui/icon';
 import { Contour } from '@/components/ui/contour';
 import { Price, CurrencyToggle } from '@/components/site/price';
 import { RoomActions } from '@/components/site/room-actions';
+import { RoomGallery } from '@/components/site/room-gallery';
 import { RoomCard, RoomFacts } from '@/components/blocks/content';
 import { GalleryGrid } from '@/components/blocks/gallery';
 
@@ -40,7 +39,8 @@ export default async function RoomPage({ params }: Props) {
   const groups = Object.entries(
     room.amenities.reduce<Record<string, typeof room.amenities>>((acc, a) => ((acc[a.category] ??= []).push(a), acc), {}),
   );
-  const [second, third] = room.gallery.filter((g) => g.id !== room.hero?.id);
+  // Hero first, then the gallery (without repeating the hero).
+  const photos = [room.hero, ...room.gallery.filter((g) => g.id !== room.hero?.id)].filter((m): m is NonNullable<typeof m> => !!m);
 
   return (
     <article>
@@ -62,12 +62,8 @@ export default async function RoomPage({ params }: Props) {
         <Link href="/rooms" className="inline-flex items-center gap-2 text-sm text-fg-muted hover:text-fg">
           <ArrowLeft className="size-4" /> All rooms
         </Link>
-        <div className="mt-6 grid gap-3 md:grid-cols-[2fr_1fr] md:grid-rows-2 md:h-[min(72vh,44rem)]">
-          <ViewTransition name={`room-${slug}`}>
-            <MediaImage media={room.hero} priority sizes="(min-width:768px) 66vw, 100vw" className="aspect-[4/3] rounded-[var(--r-lg)] md:row-span-2 md:aspect-auto md:h-full" badge />
-          </ViewTransition>
-          {second && <MediaImage media={second} sizes="33vw" className="hidden rounded-[var(--r-lg)] md:block md:h-full" />}
-          {third && <MediaImage media={third} sizes="33vw" className="hidden rounded-[var(--r-lg)] md:block md:h-full" />}
+        <div className="mt-6">
+          <RoomGallery slug={slug} roomName={name} photos={photos} />
         </div>
       </div>
 
@@ -116,11 +112,11 @@ export default async function RoomPage({ params }: Props) {
         </aside>
       </div>
 
-      {room.gallery.length > 3 && (
+      {photos.length > 5 && (
         <section className="section-y tone-warm">
           <div className="container-x">
-            <h2 className="mb-10 text-step-3">Around the {name}</h2>
-            <GalleryGrid items={room.gallery} variant="masonry" />
+            <h2 className="mb-10 text-step-3">More of the {name}</h2>
+            <GalleryGrid items={photos.slice(5)} variant="masonry" />
           </div>
         </section>
       )}

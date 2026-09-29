@@ -94,6 +94,7 @@ export async function seedPages(refs: Refs, ownerId: string) {
           { value: '25 min', label: en('by car to the first of Sipi’s three falls') },
         ],
       }),
+      block('nowStrip', { heading: en('Cool air, long light'), showForecast: true, compareKampala: true }, { variant: 'band' }),
       block(
         'story',
         {
@@ -252,6 +253,7 @@ export async function seedPages(refs: Refs, ownerId: string) {
     [
       block('hero', { eyebrow: en('Kapchorwa'), heading: en('Kapchorwa is why they drive.'), sub: en('Sipi’s falls, Elgon’s slopes, coffee at altitude, and a road that climbs the escarpment.'), media: [destHero], ctas: [cta('The road', 'link', 'secondary', '/kapchorwa/the-road')] }, { variant: 'fullbleed' }),
       block('destinationCards', { heading: en('Places, seasons, and practical things'), destinationIds: allDest }),
+      block('nowStrip', { eyebrow: en('On the mountain today'), showForecast: true, compareKampala: true }, { variant: 'card' }),
       block('journey', {
         eyebrow: en('The road'),
         heading: en('Kampala to Kapchorwa, stop by stop'),

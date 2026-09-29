@@ -1,5 +1,6 @@
 'use client';
 import { use, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Ban, BedDouble, CalendarDays, Copy, HandCoins, Mail, MessageSquareText, Phone, RotateCcw, Send, Undo2, Users } from 'lucide-react';
@@ -12,12 +13,13 @@ import { Button } from '@/components/ui/button';
 import { PageHeader, Pill, Section, Skeleton, Status } from '@/components/ui/bits';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectInput, Switch, TextArea, TextInput } from '@/components/ui/field';
+import { StayPanel, type StayDetail } from '@/components/house/stay-panel';
 
 type Detail = {
   id: string; code: string; status: string; source: string; currency: string; arrival: string; departure: string; nights: number; adults: number; children: number;
   totalMinor: string; paidMinor: string; balanceMinor: string; depositMinor: string; holdExpiresAt: string | null; eta: string | null; guestNotes: string | null; staffNotes: string | null;
   cancelReason: string | null; confirmedAt: string | null; cancelledAt: string | null; createdAt: string; guestLink: string;
-  contact: { name: string; phone: string | null; email: string | null; country: string | null };
+  contact: { id: string; name: string; phone: string | null; email: string | null; country: string | null };
   ratePlan: { code: string; name: { en?: string }; mealPlan: string; depositPercent: number };
   cancellation: { rules?: { daysBefore: number; refundPercent: number }[]; text?: { en?: string } };
   rooms: { name: string; quantity: number; nightly: { date: string; amountMinor: string }[] }[];
@@ -25,7 +27,7 @@ type Detail = {
   folio: { id: string; kind: string; description: string; date: string; amountMinor: string }[];
   payments: { id: string; reference: string; purpose: string; amountMinor: string; status: string; provider: string; method: string; redirectUrl: string | null; confirmationCode: string | null; paidAt: string | null; createdAt: string }[];
   history: { id: string; summary: string; actor: string; createdAt: string }[];
-};
+} & Omit<StayDetail, 'guest' | 'contact' | 'keep'>;
 
 const METHODS = [['MOBILE_MONEY', 'Mobile money (MTN / Airtel)'], ['CASH', 'Cash'], ['CARD', 'Card at the desk'], ['BANK', 'Bank transfer']] as const;
 const MEAL: Record<string, string> = { RO: 'Room only', BB: 'Breakfast included', HB: 'Half board', FB: 'Full board' };
@@ -34,6 +36,7 @@ export default function ReservationPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const qc = useQueryClient();
   const can = useCan();
+  const autoCheckIn = useSearchParams().get('checkin') === '1';
   const { data: r, isLoading } = useQuery({ queryKey: ['reservation', id], queryFn: () => get<Detail>(`/reservations/${id}`) });
   const [dialog, setDialog] = useState<null | 'pay' | 'refund' | 'cancel'>(null);
   const [notes, setNotes] = useState('');
@@ -143,6 +146,7 @@ export default function ReservationPage({ params }: { params: Promise<{ id: stri
         </div>
 
         <aside className="grid gap-5 xl:sticky xl:top-20">
+          <StayPanel r={{ ...r, guest: { name: r.contact.name } }} onChange={() => refresh()} autoCheckIn={autoCheckIn} />
           <div className="card p-5">
             <p className="text-[12px] text-fg-muted">Total</p>
             <p className="text-[1.8rem] font-semibold tabular">{money(r.totalMinor, r.currency)}</p>

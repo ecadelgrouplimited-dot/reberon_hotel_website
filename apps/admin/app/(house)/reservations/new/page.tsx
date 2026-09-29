@@ -13,22 +13,24 @@ import { PageHeader, Section, Skeleton } from '@/components/ui/bits';
 import { SelectInput, Switch, TextArea, TextInput } from '@/components/ui/field';
 
 const today = () => new Date().toISOString().slice(0, 10);
+const kampalaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Kampala' }).format(new Date());
 const plus = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 function NewReservation() {
   const params = useSearchParams();
   const router = useRouter();
   const fromWaitlist = params.get('waitlist');
-  const [arrival, setArrival] = useState(plus(today(), 7));
-  const [departure, setDeparture] = useState(plus(today(), 9));
+  const walkIn = params.get('walkin') === '1';
+  const [arrival, setArrival] = useState(walkIn ? kampalaToday() : plus(today(), 7));
+  const [departure, setDeparture] = useState(walkIn ? plus(kampalaToday(), 1) : plus(today(), 9));
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [currency, setCurrency] = useState<'UGX' | 'USD'>('UGX');
   const [pick, setPick] = useState<{ roomTypeId: string; ratePlanId: string; rooms: number } | null>(null);
   const [extras, setExtras] = useState<Record<string, number>>({});
   const [guest, setGuest] = useState({ name: '', phone: '', email: '' });
-  const [source, setSource] = useState('PHONE');
-  const [confirmNow, setConfirmNow] = useState(false);
+  const [source, setSource] = useState(walkIn ? 'WALK_IN' : 'PHONE');
+  const [confirmNow, setConfirmNow] = useState(walkIn);
   const [notes, setNotes] = useState('');
 
   const wl = useQuery({ queryKey: ['waitlist-entry', fromWaitlist], queryFn: () => get<WaitlistEntryDTO>(`/waitlist/${fromWaitlist}`), enabled: !!fromWaitlist });
@@ -73,7 +75,7 @@ function NewReservation() {
       }),
     onSuccess: (r) => {
       toast.success(confirmNow ? `${r.code} confirmed` : `${r.code} held for 24 hours${r.paymentLink ? ' — payment link ready' : ''}`);
-      router.replace(`/reservations/${r.id}`);
+      router.replace(walkIn && confirmNow && arrival === kampalaToday() ? `/reservations/${r.id}?checkin=1` : `/reservations/${r.id}`);
     },
     onError: (e) => toast.error(e instanceof ApiError ? (e.errors[0]?.message ?? e.message) : 'Could not create'),
   });
@@ -88,7 +90,7 @@ function NewReservation() {
 
   return (
     <div className="fade-in">
-      <PageHeader crumbs={[{ label: 'Reservations', href: '/reservations' }, { label: 'New' }]} title="New reservation" description={fromWaitlist ? 'Converting a name from the first-stay list.' : 'For a phone call, a WhatsApp chat or someone at the desk.'} />
+      <PageHeader crumbs={walkIn ? [{ label: 'Front desk', href: '/desk' }, { label: 'Walk-in' }] : [{ label: 'Reservations', href: '/reservations' }, { label: 'New' }]} title={walkIn ? 'Walk-in' : 'New reservation'} description={walkIn ? 'Someone at the desk now. Book tonight, then check them straight in.' : fromWaitlist ? 'Converting a name from the first-stay list.' : 'For a phone call, a WhatsApp chat or someone at the desk.'} />
       <div className="grid items-start gap-5 xl:grid-cols-[1fr_22rem]">
         <div className="grid gap-5">
           <Section title="1 · When and who">
@@ -165,7 +167,7 @@ function NewReservation() {
                 <div className="flex justify-between border-t border-line pt-2 text-[15px] font-semibold"><dt>Total</dt><dd className="tabular">{money(roomsTotal + extrasTotal, currency)}</dd></div>
               </dl>
               <Switch label="Confirm now" hint={confirmNow ? 'Rooms are sold now; take payment at the desk.' : 'Held for 24 hours with a payment link you can send on WhatsApp.'} checked={confirmNow} onChange={setConfirmNow} />
-              <Button variant="primary" size="lg" loading={create.isPending} disabled={!guest.name || !guest.phone} onClick={() => create.mutate()}>{confirmNow ? 'Confirm reservation' : 'Hold and create payment link'}</Button>
+              <Button variant="primary" size="lg" loading={create.isPending} disabled={!guest.name || !guest.phone} onClick={() => create.mutate()}>{walkIn && confirmNow ? 'Book and go to check-in' : confirmNow ? 'Confirm reservation' : 'Hold and create payment link'}</Button>
             </>
           )}
         </aside>

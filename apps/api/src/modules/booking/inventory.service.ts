@@ -71,6 +71,29 @@ export class InventoryService {
       WHERE "roomTypeId" = ${roomTypeId}::uuid AND date >= ${day(dates[0]!)} AND date <= ${day(dates[dates.length - 1]!)}`;
   }
 
+  /** Take one physical room off sale for these nights; returns the nights that were already full. */
+  async block(tx: Tx, roomTypeId: string, dates: string[]) {
+    await this.ensure([roomTypeId], dates, tx);
+    const full = await tx.$queryRaw<{ date: Date }[]>`
+      SELECT date FROM "InventoryDay"
+      WHERE "roomTypeId" = ${roomTypeId}::uuid AND date >= ${day(dates[0]!)} AND date <= ${day(dates[dates.length - 1]!)}
+        AND "totalRooms" - "soldRooms" - "heldRooms" - "blockedRooms" < 1
+      ORDER BY date FOR UPDATE`;
+    if (full.length) return full.map((f) => iso(f.date));
+    const updated = await tx.$executeRaw`
+      UPDATE "InventoryDay" SET "blockedRooms" = "blockedRooms" + 1, "updatedAt" = now()
+      WHERE "roomTypeId" = ${roomTypeId}::uuid AND date >= ${day(dates[0]!)} AND date <= ${day(dates[dates.length - 1]!)}
+        AND "totalRooms" - "soldRooms" - "heldRooms" - "blockedRooms" >= 1`;
+    if (updated !== dates.length) throw new InventoryUnavailable();
+    return [];
+  }
+
+  async unblock(tx: Tx, roomTypeId: string, dates: string[]) {
+    if (!dates.length) return;
+    await tx.$executeRaw`UPDATE "InventoryDay" SET "blockedRooms" = GREATEST(0, "blockedRooms" - 1), "updatedAt" = now()
+      WHERE "roomTypeId" = ${roomTypeId}::uuid AND date >= ${day(dates[0]!)} AND date <= ${day(dates[dates.length - 1]!)}`;
+  }
+
   async release(tx: Tx, roomTypeId: string, dates: string[], rooms: number, from: 'held' | 'sold') {
     if (from === 'held') {
       await tx.$executeRaw`UPDATE "InventoryDay" SET "heldRooms" = GREATEST(0, "heldRooms" - ${rooms}), "updatedAt" = now()

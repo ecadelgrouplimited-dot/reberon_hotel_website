@@ -267,6 +267,14 @@ export const BLOCKS: BlockDefinition[] = [
     fields: [{ kind: 'ltext', name: 'text', label: 'Quote', required: true, multiline: true }, { kind: 'ltext', name: 'attribution', label: 'Attribution' }, { kind: 'media', name: 'media', label: 'Background image' }],
   },
   {
+    type: 'voices',
+    label: 'Guest voices',
+    description: 'What guests said, in their words — only those who agreed to be quoted.',
+    icon: 'message-circle-heart',
+    resolves: true,
+    fields: [eyebrow, heading(), intro, { kind: 'number', name: 'limit', label: 'How many', min: 1, max: 12 }],
+  },
+  {
     type: 'faq',
     label: 'Questions',
     description: 'An FAQ group as an accordion.',

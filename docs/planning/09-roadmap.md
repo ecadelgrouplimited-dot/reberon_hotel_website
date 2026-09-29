@@ -2,7 +2,7 @@
 
 Phases map to the spec's Movements. Each phase ends with a demo on staging and the acceptance checklist signed off.
 
-## Status (2026-09-29)
+## Status (2026-09-30)
 
 - **Phase 0:** done. MinIO is deferred (ADR-015), and CI is still to wire up (0.10).
 - **Phase 1:** done except 1.15 (production deploy). That waits on the domain and hosting decisions (Q2, Q9).
@@ -16,6 +16,19 @@ Phases map to the spec's Movements. Each phase ends with a demo on staging and t
   - holds expire and release rooms
   - cancellation refunds follow the policy
   - the full website booking journey works in Chrome
+- **Phase 4 (Movement IV, the House):** built and verified. Some parts wait on field data (real room numbers, staff rota) and on SMS:
+  - front desk (M13): arrivals, in-house, departures and late arrivals; check-in with room choice, payment and ID; check-out with balance, early departure and write-off; walk-in; no-show; move room; folio charges and credits
+  - room rack and housekeeping (M14): rooms by floor with live status, phone-first cleaning list (start → done → inspected), room blocks that take nights off sale
+  - guests and memory (M15): one profile per person, stay history, preferred room, tags, VIP, ID stored encrypted, duplicate detection and merge (ADR-017)
+  - feedback (M12): at check-out or from the stay page; with the guest's consent the owner can put their words on the website (a "Guest voices" block)
+  - reports (M21): occupancy, ADR, RevPAR, revenue by currency, source mix, lead time, CSV export
+
+  Verified:
+  - the database refuses to give one room to two stays on the same night, and refuses overlapping blocks (exclusion constraints)
+  - inventory still matches live reservations on every night after check-in, early check-out, move, no-show and blocks
+  - housekeeping never receives money or phone numbers, and cannot reach the desk, guests or reports
+  - walk-in → check-in → check-out works in Chrome
+- **Phase 3 (Movement III):** deferred on purpose. It needs tours, guides and partners from the field.
 
 Verified end to end in a real browser:
 - publish → live on the website in under 1 second

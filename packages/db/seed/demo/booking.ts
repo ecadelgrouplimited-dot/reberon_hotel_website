@@ -7,7 +7,7 @@ const day = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 /** Weekends and high season cost more; everything rounds to prices people say out loud. */
-function priceFor(base: number, date: string, currency: 'UGX' | 'USD') {
+export function priceFor(base: number, date: string, currency: 'UGX' | 'USD') {
   const d = day(date);
   const dow = d.getUTCDay();
   const md = date.slice(5);

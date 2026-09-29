@@ -20,6 +20,9 @@
 | ADR-014 | 2026-09-29 | JS budget revised to ≤170 KB total / ≤30 KB app code | The React 19 + Next 16 runtime alone is ~150 KB compressed; the original 110 KB target was unattainable. Browser code must import `@reberon/contracts/text`, never the Zod entry | Accepted |
 | ADR-015 | 2026-09-29 | Local-disk media storage in dev (MinIO deferred); `StorageDriver` interface keeps S3 a drop-in | Fewer moving parts locally | Accepted |
 | ADR-016 | 2026-09-29 | Public API returns localized objects (`{en: …}`); the website resolves the locale | One cached response serves every locale | Accepted |
+| ADR-017 | 2026-09-30 | The guest profile is the existing `Contact`, extended (not a separate `Guest` table as sketched in 03 §9). Merges set `mergedIntoId` and move bookings, conversations and list entries | Enquiries, first-stay names and bookings already point at Contact, so a returning guest's whole history joins up with no copying | Accepted |
+| ADR-018 | 2026-09-30 | Room occupancy is `RoomAssignment` rows guarded by Postgres exclusion constraints; a room block raises `InventoryDay.blockedRooms` atomically and is refused if it would oversell | The database, not the screen, is what stops a double-booked room | Accepted |
+| ADR-019 | 2026-09-30 | Room moves stay within the same room type for now | Changing type mid-stay alters what was sold; that needs a priced amendment flow, planned with Movement II changes | Accepted |
 
 ## Open questions (need answers from Denis / Wilson)
 

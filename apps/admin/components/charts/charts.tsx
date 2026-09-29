@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Table2, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -9,7 +9,7 @@ export function StatTile({ label, value, note, href }: { label: string; value: n
   return (
     <Tag href={href} className={cn('card block p-5', href && 'transition-colors hover:border-line-strong')}>
       <p className="text-[12.5px] font-medium text-fg-muted">{label}</p>
-      <p className="mt-2 text-[2rem] font-semibold leading-none tracking-tight">{typeof value === 'number' ? value.toLocaleString('en') : value}</p>
+      <p className={cn('mt-2 font-semibold leading-none tracking-tight', String(value).length > 13 ? 'text-[1.55rem]' : 'text-[2rem]')}>{typeof value === 'number' ? value.toLocaleString('en') : value}</p>
       {note && <p className="mt-2 text-[12px] text-fg-subtle">{note}</p>}
     </Tag>
   );
@@ -28,10 +28,20 @@ function niceMax(v: number) {
  * Columns over time, single series. 24px max bars, 4px rounded tops square at the
  * baseline, 2px surface gap, hairline grid, per-bar hover/focus tooltip, table view.
  */
-export function ColumnChart({ data, label, height = 180 }: { data: { date: string; count: number }[]; label: string; height?: number }) {
+export function ColumnChart({ data, label, height = 180, caption, max: fixedMax, format = (n: number) => String(n), endLabel = 'Today' }: {
+  data: { date: string; count: number }[];
+  label: string;
+  height?: number;
+  /** Replaces the default "label · total in 30 days". */
+  caption?: ReactNode;
+  /** A fixed top (e.g. 100 for percentages). */
+  max?: number;
+  format?: (n: number) => string;
+  endLabel?: string;
+}) {
   const [hover, setHover] = useState<number | null>(null);
   const [table, setTable] = useState(false);
-  const max = niceMax(Math.max(1, ...data.map((d) => d.count)));
+  const max = fixedMax ?? niceMax(Math.max(1, ...data.map((d) => d.count)));
   const ticks = [0, max / 2, max];
   const fmt = (d: string) => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${d}T12:00:00Z`));
   const total = data.reduce((a, d) => a + d.count, 0);
@@ -41,7 +51,7 @@ export function ColumnChart({ data, label, height = 180 }: { data: { date: strin
     <figure>
       <div className="mb-3 flex items-center justify-between">
         <figcaption className="text-[12.5px] text-fg-muted">
-          {label} · <span className="font-semibold text-fg tabular">{total}</span> in 30 days
+          {caption ?? <>{label} · <span className="font-semibold text-fg tabular">{total}</span> in 30 days</>}
         </figcaption>
         <button type="button" onClick={() => setTable((v) => !v)} className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[12px] text-fg-muted hover:bg-surface-2" aria-pressed={table}>
           {table ? <BarChart3 className="size-3.5" /> : <Table2 className="size-3.5" />} {table ? 'Chart' : 'Table'}
@@ -60,7 +70,7 @@ export function ColumnChart({ data, label, height = 180 }: { data: { date: strin
               {data.map((d) => (
                 <tr key={d.date} className="border-t border-line">
                   <td className="py-1">{fmt(d.date)}</td>
-                  <td className="py-1 text-right">{d.count}</td>
+                  <td className="py-1 text-right">{format(d.count)}</td>
                 </tr>
               ))}
             </tbody>
@@ -70,7 +80,7 @@ export function ColumnChart({ data, label, height = 180 }: { data: { date: strin
         <div className="relative flex gap-2" style={{ height }}>
           <div className="flex flex-col justify-between pb-6 text-right text-[11px] tabular text-fg-subtle">
             {[...ticks].reverse().map((t) => (
-              <span key={t} className="-translate-y-1/2 leading-none">{t}</span>
+              <span key={t} className="-translate-y-1/2 leading-none">{format(t)}</span>
             ))}
           </div>
           <div className="relative flex-1">
@@ -88,7 +98,7 @@ export function ColumnChart({ data, label, height = 180 }: { data: { date: strin
                     onPointerLeave={() => setHover(null)}
                     onFocus={() => setHover(i)}
                     onBlur={() => setHover(null)}
-                    aria-label={`${fmt(d.date)}: ${d.count}`}
+                    aria-label={`${fmt(d.date)}: ${format(d.count)}`}
                   >
                     <span
                       className={cn('block w-full max-w-6 rounded-t-[4px] transition-opacity', hover !== null && hover !== i && 'opacity-45')}
@@ -96,7 +106,7 @@ export function ColumnChart({ data, label, height = 180 }: { data: { date: strin
                     />
                     {i === peak && d.count > 0 && hover === null && (
                       <span className="absolute text-[11px] font-semibold tabular text-fg" style={{ bottom: `calc(${(d.count / max) * 100}% + 4px)` }}>
-                        {d.count}
+                        {format(d.count)}
                       </span>
                     )}
                   </button>
@@ -106,7 +116,7 @@ export function ColumnChart({ data, label, height = 180 }: { data: { date: strin
             <div className="absolute inset-x-0 bottom-0 flex justify-between text-[11px] text-fg-subtle">
               <span>{fmt(data[0]!.date)}</span>
               <span>{fmt(data[Math.floor(data.length / 2)]!.date)}</span>
-              <span>Today</span>
+              <span>{endLabel === 'last' ? fmt(data[data.length - 1]!.date) : endLabel}</span>
             </div>
             {hover !== null && (
               <div
@@ -114,7 +124,7 @@ export function ColumnChart({ data, label, height = 180 }: { data: { date: strin
                 style={{ left: `${((hover + 0.5) / data.length) * 100}%`, top: -8 }}
                 role="status"
               >
-                <span className="text-fg-muted">{fmt(data[hover]!.date)}</span> · <span className="font-semibold tabular">{data[hover]!.count}</span>
+                <span className="text-fg-muted">{fmt(data[hover]!.date)}</span> · <span className="font-semibold tabular">{format(data[hover]!.count)}</span>
               </div>
             )}
           </div>

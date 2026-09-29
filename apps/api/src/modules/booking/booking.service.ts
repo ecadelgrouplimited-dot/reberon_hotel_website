@@ -84,16 +84,18 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
     const phone = g.phone ? normalizePhone(g.phone) : null;
     if (g.phone && !phone) throw new AppError(HttpStatus.UNPROCESSABLE_ENTITY, 'VALIDATION_FAILED', 'That phone number does not look right', [{ path: 'guest.phone', message: 'Check the number' }]);
     const email = g.email?.toLowerCase() ?? null;
-    const existing = (phone && (await tx.contact.findFirst({ where: { phone }, orderBy: { createdAt: 'desc' } }))) || (email && (await tx.contact.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } }))) || null;
+    const existing = (phone && (await tx.contact.findFirst({ where: { phone }, orderBy: [{ mergedIntoId: { sort: 'asc', nulls: 'first' } }, { createdAt: 'desc' }] }))) || (email && (await tx.contact.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } }))) || null;
+    const target = existing?.mergedIntoId ? await tx.contact.findUnique({ where: { id: existing.mergedIntoId } }) : null;
+    if (target) return target;
     if (existing) return tx.contact.update({ where: { id: existing.id }, data: { name: g.name, phone: phone ?? existing.phone, email: email ?? existing.email } });
     return tx.contact.create({ data: { name: g.name, phone, email, source, whatsappOptIn: !!phone } });
   }
 
-  private async change(tx: Tx, reservationId: string, kind: string, summary: string, actorId?: string | null, after?: unknown) {
+  async change(tx: Tx, reservationId: string, kind: string, summary: string, actorId?: string | null, after?: unknown) {
     await tx.reservationChange.create({ data: { reservationId, kind, summary, actorId: actorId ?? null, after: after === undefined ? undefined : (JSON.parse(JSON.stringify(after, (_, v) => (typeof v === 'bigint' ? v.toString() : v))) as Prisma.InputJsonValue) } });
   }
 
-  private money(amount: bigint, currency: string) {
+  money(amount: bigint, currency: string) {
     return formatMoney(amount, currency as CurrencyCode).replace(/\.00$/, '');
   }
 
@@ -474,7 +476,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
   }
 
   async detail(id: string) {
-    const r = await this.prisma.reservation.findUnique({ where: { id }, include: full });
+    const r = await this.prisma.reservation.findUnique({ where: { id }, include: { ...full, assignments: { include: { room: true }, orderBy: { fromDate: 'asc' } }, feedback: true } });
     if (!r) throw notFound('Reservation');
     const names = await this.roomTypeNames();
     const extraNames = r.extras.length ? new Map((await this.prisma.extra.findMany({ where: { id: { in: r.extras.map((e) => e.extraId) } } })).map((e) => [e.id, t(lt(e.name))])) : new Map<string, string>();
@@ -497,12 +499,18 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
       folio: (r.folio?.lines ?? []).map((l) => ({ id: l.id, kind: l.kind, description: l.description, date: iso(l.date), amountMinor: l.amountMinor.toString() })),
       payments: r.payments.map((p) => ({ id: p.id, reference: p.merchantReference, purpose: p.purpose, amountMinor: p.amountMinor.toString(), status: p.status, provider: p.provider, method: p.method, redirectUrl: p.status === 'PENDING' ? p.redirectUrl : null, confirmationCode: p.confirmationCode, paidAt: p.paidAt?.toISOString() ?? null, createdAt: p.createdAt.toISOString() })),
       history: r.changes.map((c) => ({ id: c.id, kind: c.kind, summary: c.summary, actor: c.actorId ? (staff.get(c.actorId) ?? 'Staff') : c.kind === 'created' && r.source === 'DIRECT' ? 'Guest (website)' : 'System', createdAt: c.createdAt.toISOString() })),
+      checkedInAt: r.checkedInAt?.toISOString() ?? null,
+      checkedOutAt: r.checkedOutAt?.toISOString() ?? null,
+      reservationRooms: r.rooms.map((x) => ({ id: x.id, roomTypeId: x.roomTypeId, name: names.get(x.roomTypeId) ?? 'Room', quantity: x.quantity })),
+      assignments: r.assignments.map((a) => ({ id: a.id, reservationRoomId: a.reservationRoomId, roomId: a.roomId, number: a.room.number, fromDate: iso(a.fromDate), toDate: iso(a.toDate), active: !a.releasedAt })),
+      feedback: r.feedback ? { score: r.feedback.score, comment: r.feedback.comment, allowPublic: r.feedback.allowPublic, createdAt: r.feedback.createdAt.toISOString() } : null,
+      previousStays: await this.prisma.reservation.count({ where: { contactId: r.contactId, status: 'CHECKED_OUT', id: { not: r.id } } }),
       guestLink: `${env.WEB_URL}/stay?code=${r.code}&t=${this.accessToken(r.code)}`,
     };
   }
 
   async guestStay(code: string): Promise<GuestStayDTO> {
-    const r = await this.prisma.reservation.findUnique({ where: { code }, include: { contact: true, ratePlan: true, rooms: true, extras: true, payments: { orderBy: { createdAt: 'asc' } } } });
+    const r = await this.prisma.reservation.findUnique({ where: { code }, include: { contact: true, ratePlan: true, rooms: true, extras: true, feedback: true, payments: { orderBy: { createdAt: 'asc' } } } });
     if (!r) throw notFound('Booking');
     const rts = await this.prisma.roomType.findMany({ where: { id: { in: r.rooms.map((x) => x.roomTypeId) } }, include: { hero: true } });
     const extras = r.extras.length ? await this.prisma.extra.findMany({ where: { id: { in: r.extras.map((e) => e.extraId) } } }) : [];
@@ -533,6 +541,8 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
       checkOut: String(settings['hotel.checkOutTime'] ?? '10:30'),
       payments: r.payments.map((p) => ({ amountMinor: p.amountMinor.toString(), status: p.status, method: p.method, paidAt: p.paidAt?.toISOString() ?? null })),
       canPayBalance: (r.status === 'CONFIRMED' && balance > 0n) || (r.status === 'HELD' && !!r.holdExpiresAt && r.holdExpiresAt > new Date()),
+      canGiveFeedback: r.status === 'IN_HOUSE' || (r.status === 'CHECKED_OUT' && !!r.checkedOutAt && Date.now() - r.checkedOutAt.getTime() < 60 * 86_400_000),
+      feedback: r.feedback ? { score: r.feedback.score, comment: r.feedback.comment, allowPublic: r.feedback.allowPublic } : null,
     };
   }
 

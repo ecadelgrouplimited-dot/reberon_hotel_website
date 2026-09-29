@@ -8,6 +8,7 @@ import { ProgressTimeline, DestinationCards, JourneyBlock, SeasonStrip } from '.
 import { Quote, Faq, ContactCard, MapBlock, FormBlock, CtaBand, RichTextBlock, Spacer } from './closing';
 import { GalleryGrid } from './gallery';
 import { NowStrip } from './now-strip';
+import { Voices } from './voices';
 import type { BlockProps } from './types';
 
 function Gallery({ block, media }: BlockProps<{ eyebrow?: LText; heading?: LText; media?: string[] }>) {
@@ -43,6 +44,7 @@ const REGISTRY: Record<string, (p: BlockProps<never, never>) => React.ReactNode>
   richText: RichTextBlock as never,
   spacer: Spacer as never,
   nowStrip: NowStrip as never,
+  voices: Voices as never,
 };
 
 /** Blocks that manage their own vertical rhythm (full-bleed or spacing). */

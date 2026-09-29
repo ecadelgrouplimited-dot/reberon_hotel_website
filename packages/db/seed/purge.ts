@@ -9,6 +9,8 @@ async function main() {
   await prisma.$transaction([
     prisma.paymentIntent.deleteMany({ where: { reservationId: { in: demoRes.map((r) => r.id) } } }),
     prisma.reservation.deleteMany({ where: { isSeed: true } }),
+    prisma.housekeepingTask.deleteMany({ where: { isSeed: true } }),
+    prisma.roomBlock.deleteMany({ where: { room: { isSeed: true } } }),
     prisma.inventoryDay.deleteMany({}),
     prisma.extra.deleteMany({ where: { isSeed: true } }),
     prisma.package.deleteMany({ where: { isSeed: true } }),

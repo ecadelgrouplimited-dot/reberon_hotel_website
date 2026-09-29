@@ -246,3 +246,97 @@ describe('lockout', () => {
     assert.equal(locked.status, 429);
   });
 });
+
+describe('the house (Movement IV)', () => {
+  const OWNER = 'owner@reberonhotel.ug';
+  const DESK = 'desk@reberonhotel.ug';
+  const HK = 'housekeeping@reberonhotel.ug';
+
+  test('the desk board adds up', async () => {
+    const r = await (await as(DESK)).get('/admin/desk');
+    assert.equal(r.status, 200);
+    const b = r.body;
+    assert.match(b.date, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(b.counts.inHouse, b.inHouse.length);
+    assert.ok(b.inHouse.every((s: { status: string }) => s.status === 'IN_HOUSE'));
+    assert.ok(b.arrivals.every((s: { arrival: string }) => s.arrival === b.date));
+    // Every guest in the house sits in exactly one occupied room.
+    const occupied = b.rooms.filter((x: { occupant: unknown }) => x.occupant);
+    const assigned = b.inHouse.flatMap((s: { rooms: { assigned: unknown[] }[] }) => s.rooms.flatMap((x) => x.assigned));
+    assert.equal(occupied.length, assigned.length);
+  });
+
+  test('housekeeping sees rooms, never money or phone numbers', async () => {
+    const hk = await as(HK);
+    const r = await hk.get('/admin/housekeeping');
+    assert.equal(r.status, 200);
+    const text = JSON.stringify(r.body);
+    assert.doesNotMatch(text, /Minor|phone|email/i);
+    for (const path of ['/admin/desk', '/admin/guests', '/admin/reservations', '/admin/feedback', `/admin/reports/house?from=2026-01-01&to=2026-01-31`]) {
+      assert.equal((await hk.get(path)).status, 403, path);
+    }
+  });
+
+  test('desk cannot block rooms, credit bills or read the owner reports', async () => {
+    const desk = await as(DESK);
+    const board = (await desk.get('/admin/desk')).body;
+    const room = board.rooms[0];
+    assert.equal((await desk.post('/admin/room-blocks', { roomId: room.id, fromDate: '2030-01-01', toDate: '2030-01-02', reason: 'STAFF' })).status, 403);
+    const guest = board.inHouse[0];
+    if (guest) assert.equal((await desk.post(`/admin/desk/reservations/${guest.id}/charges`, { kind: 'ADJUSTMENT', description: 'Goodwill', amount: '1000', credit: true })).status, 403);
+    assert.equal((await desk.get('/admin/reports/house?from=2026-01-01&to=2026-01-31')).status, 403);
+  });
+
+  test('a room with a guest in it cannot be blocked', async () => {
+    const owner = await as(OWNER);
+    const board = (await owner.get('/admin/desk')).body;
+    const busy = board.rooms.find((x: { occupant: { departsToday: boolean } | null }) => x.occupant && !x.occupant.departsToday);
+    if (!busy) return;
+    const next = new Date(Date.parse(`${board.date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+    const r = await owner.post('/admin/room-blocks', { roomId: busy.id, fromDate: board.date, toDate: next, reason: 'MAINTENANCE' });
+    assert.equal(r.status, 409);
+  });
+
+  test('check-in and no-show wait for the arrival day', async () => {
+    const desk = await as(DESK);
+    const future = (await desk.get('/admin/reservations?status=CONFIRMED')).body.data.find((x: { arrival: string }) => x.arrival > new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10));
+    assert.ok(future, 'a future confirmed booking in the seed');
+    const ci = await desk.post(`/admin/desk/reservations/${future.id}/check-in`, {});
+    assert.equal(ci.status, 400);
+    assert.match(ci.body.detail, /arrives on/);
+    assert.equal((await desk.post(`/admin/desk/reservations/${future.id}/no-show`, {})).status, 400);
+    assert.equal((await desk.post(`/admin/desk/reservations/${future.id}/check-out`, {})).status, 400);
+  });
+
+  test('guest profiles keep ID numbers sealed', async () => {
+    const desk = await as(DESK);
+    const list = await desk.get('/admin/guests?filter=returning');
+    assert.equal(list.status, 200);
+    assert.ok(list.body.data.length > 0);
+    const p = await desk.get(`/admin/guests/${list.body.data[0].id}`);
+    assert.equal(p.status, 200);
+    assert.ok(Array.isArray(p.body.reservations));
+    assert.doesNotMatch(JSON.stringify(p.body), /idDocNumber/);
+  });
+
+  test('guest feedback needs the stay link', async () => {
+    const desk = await as(DESK);
+    const r = (await desk.get('/admin/reservations?status=CHECKED_OUT')).body.data[0];
+    const res = await new Client().post(`/public/bookings/${r.code}/feedback`, { t: 'x'.repeat(32), score: 'GOOD' });
+    assert.equal(res.status, 404);
+  });
+
+  test('the owner report is internally consistent', async () => {
+    const owner = await as(OWNER);
+    const today = (await owner.get('/admin/desk')).body.date as string;
+    const from = new Date(Date.parse(`${today}T00:00:00Z`) - 60 * 86_400_000).toISOString().slice(0, 10);
+    const r = await owner.get(`/admin/reports/house?from=${from}&to=${today}`);
+    assert.equal(r.status, 200);
+    const t = r.body.totals;
+    assert.equal(r.body.days.length, 61);
+    assert.equal(t.roomNightsSold, r.body.days.reduce((a: number, d: { sold: number }) => a + d.sold, 0));
+    assert.ok(r.body.days.every((d: { sold: number; available: number }) => d.sold <= d.available));
+    assert.ok(BigInt(t.roomRevenue.UGX) > 0n);
+    assert.equal((await owner.get(`/admin/reports/house?from=${today}&to=${from}`)).status, 422);
+  });
+});

@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { CalendarCheck, Clock, LoaderCircle, MessageSquare, Printer } from 'lucide-react';
+import { CalendarCheck, Clock, Frown, LoaderCircle, Meh, MessageSquare, Printer, Smile } from 'lucide-react';
 import type { GuestStayDTO } from '@reberon/contracts';
 import { t } from '@reberon/contracts/text';
 import { formatMoney, whatsappLink, type Currency } from '@reberon/utils';
@@ -53,6 +53,8 @@ export function StayView({ code, token, waitForPayment }: { code: string; token:
   const heading =
     s.status === 'HELD' ? (waitForPayment && waited < 30 ? 'Confirming your payment…' : 'Your room is held — payment not received yet')
     : s.status === 'CONFIRMED' ? (waitForPayment ? `You are booked, ${s.guestName.split(' ')[0]}.` : `Your stay, ${s.guestName.split(' ')[0]}`)
+    : s.status === 'IN_HOUSE' ? `Welcome to Reberon, ${s.guestName.split(' ')[0]}.`
+    : s.status === 'CHECKED_OUT' ? `Thank you for staying, ${s.guestName.split(' ')[0]}.`
     : s.status === 'CANCELLED' ? 'This booking is cancelled'
     : s.status === 'EXPIRED' ? 'This hold has ended'
     : 'Your stay';
@@ -67,6 +69,7 @@ export function StayView({ code, token, waitForPayment }: { code: string; token:
         </h1>
         {confirmed && waitForPayment && <p className="mt-4 text-step-1 text-fg-muted">Your confirmation is on its way by email. Everything is below — bookmark this page.</p>}
         {s.status === 'HELD' && s.holdExpiresAt && (!waitForPayment || waited >= 30) && <p className="mt-4 text-step-1 text-fg-muted">We hold your room until {new Date(s.holdExpiresAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Kampala' })}. If the payment did not go through, try again below.</p>}
+        {s.canGiveFeedback && <Feedback code={s.code} token={token} initial={s.feedback} after={s.status === 'CHECKED_OUT'} onSaved={(f) => setS({ ...s, feedback: f })} />}
         {s.status === 'EXPIRED' && <p className="mt-4 text-step-1 text-fg-muted">No payment arrived in time, so the room is free again. Nothing was charged. <a className="underline" href={`/book?arrival=${s.arrival}&departure=${s.departure}&adults=${s.adults}`}>Start again</a>.</p>}
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -113,5 +116,63 @@ export function StayView({ code, token, waitForPayment }: { code: string; token:
         <button type="button" className="btn btn-ghost justify-self-center" onClick={() => window.print()}><Printer className="size-4" /> <span className="btn-label">Print</span></button>
       </aside>
     </div>
+  );
+}
+
+const FACES = [
+  ['GOOD', 'Good', Smile],
+  ['OK', 'OK', Meh],
+  ['BAD', 'Not good', Frown],
+] as const;
+type Score = (typeof FACES)[number][0];
+
+/** One tap is enough. Words and permission to quote are optional. */
+function Feedback({ code, token, initial, after, onSaved }: { code: string; token: string; initial: GuestStayDTO['feedback']; after: boolean; onSaved: (f: NonNullable<GuestStayDTO['feedback']>) => void }) {
+  const [score, setScore] = useState<Score | null>(initial?.score ?? null);
+  const [comment, setComment] = useState(initial?.comment ?? '');
+  const [allowPublic, setAllowPublic] = useState(initial?.allowPublic ?? false);
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>(initial ? 'saved' : 'idle');
+  const [message, setMessage] = useState('');
+  async function send(next: Score = score!) {
+    setState('saving');
+    const r = await fetch(`${API}/v1/public/bookings/${code}/feedback`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, score: next, comment: comment || undefined, allowPublic }) });
+    if (!r.ok) {
+      setMessage(((await r.json().catch(() => ({}))) as { detail?: string }).detail ?? 'Could not send. Try again.');
+      return setState('error');
+    }
+    setState('saved');
+    onSaved({ score: next, comment: comment || null, allowPublic });
+  }
+  return (
+    <section id="feedback" className="mt-10 scroll-mt-28 rounded-[var(--r-xl)] border border-line p-6 sm:p-8">
+      <h2 className="text-step-2">{after ? 'How was your stay?' : 'How is your stay so far?'}</h2>
+      <p className="mt-2 text-fg-muted">{after ? 'One tap is enough. The owner reads every answer.' : 'If something is not right, tell us now — we would rather fix it tonight.'}</p>
+      <div className="mt-6 grid grid-cols-3 gap-3" role="radiogroup" aria-label="Your answer">
+        {FACES.map(([v, l, Icon]) => (
+          <button key={v} type="button" role="radio" aria-checked={score === v} onClick={() => { setScore(v); if (!initial && state === 'idle') void send(v); else setState('idle'); }}
+            className={cn('flex h-24 flex-col items-center justify-center gap-2 rounded-[var(--r-lg)] border text-base font-medium transition', score === v ? 'border-fg bg-fg text-bg' : 'border-line hover:border-fg/40')}>
+            <Icon className="size-7" aria-hidden /> {l}
+          </button>
+        ))}
+      </div>
+      {score && (
+        <div className="mt-6 grid gap-4">
+          <label className="grid gap-2 text-sm">
+            <span className="font-medium">{score === 'GOOD' ? 'What did you like?' : 'What should we do better?'} <span className="font-normal text-fg-muted">(optional)</span></span>
+            <textarea className="min-h-28 rounded-[var(--r-md)] border border-line bg-surface p-3 text-base" value={comment} onChange={(e) => { setComment(e.target.value); if (state === 'saved') setState('idle'); }} maxLength={2000} />
+          </label>
+          {score === 'GOOD' && (
+            <label className="flex items-start gap-3 text-sm">
+              <input type="checkbox" className="mt-1 size-4" checked={allowPublic} onChange={(e) => { setAllowPublic(e.target.checked); if (state === 'saved') setState('idle'); }} />
+              <span>You may quote my words on the Reberon website, with my first name and country.</span>
+            </label>
+          )}
+          <div className="flex items-center gap-4">
+            <button type="button" className="btn" disabled={state === 'saving' || state === 'saved'} onClick={() => send()}>{state === 'saving' && <LoaderCircle className="size-4 animate-spin" />}<span className="btn-label">{state === 'saved' ? 'Sent — thank you' : 'Send'}</span></button>
+            {state === 'error' && <p role="alert" className="text-sm text-danger">{message}</p>}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

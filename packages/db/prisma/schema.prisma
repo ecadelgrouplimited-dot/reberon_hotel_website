@@ -475,7 +475,10 @@ model Room {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  roomType RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  roomType    RoomType           @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  assignments RoomAssignment[]
+  tasks       HousekeepingTask[]
+  blocks      RoomBlock[]
 }
 
 // ───────────────────────── Destination (M03) ─────────────────────────
@@ -541,20 +544,33 @@ enum ContactSource {
 }
 
 model Contact {
-  id            String        @id @default(uuid(7)) @db.Uuid
-  name          String
-  phone         String?
-  email         String?
-  country       String?
-  whatsappOptIn Boolean       @default(false)
-  source        ContactSource @default(WEB)
-  isSeed        Boolean       @default(false)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                  String        @id @default(uuid(7)) @db.Uuid
+  name                String
+  phone               String?
+  email               String?
+  country             String?
+  whatsappOptIn       Boolean       @default(false)
+  source              ContactSource @default(WEB)
+  // ── Guest profile (Movement IV, M15) ──
+  nationality         String?
+  idDocType           String?
+  /// AES-256-GCM, never returned whole by the API
+  idDocNumberEnc      String?
+  idDocLast4          String?
+  preferredRoomTypeId String?       @db.Uuid
+  tags                String[]      @default([])
+  guestNotes          String?
+  isVip               Boolean       @default(false)
+  mergedIntoId        String?       @db.Uuid
+  isSeed              Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   conversations Conversation[]
   waitlist      WaitlistEntry[]
   reservations  Reservation[]
+  mergedInto    Contact?        @relation("ContactMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom    Contact[]       @relation("ContactMerge")
 
   @@index([phone])
   @@index([email])
@@ -869,21 +885,27 @@ model Reservation {
   confirmedAt          DateTime?
   cancelledAt          DateTime?
   cancelReason         String?
+  checkedInAt          DateTime?
+  checkedInById        String?           @db.Uuid
+  checkedOutAt         DateTime?
+  checkedOutById       String?           @db.Uuid
   createdById          String?           @db.Uuid
   version              Int               @default(1)
   isSeed               Boolean           @default(false)
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
 
-  contact  Contact             @relation(fields: [contactId], references: [id], onDelete: Restrict)
-  ratePlan RatePlan            @relation(fields: [ratePlanId], references: [id], onDelete: Restrict)
-  package  Package?            @relation(fields: [packageId], references: [id], onDelete: SetNull)
-  rooms    ReservationRoom[]
-  extras   ReservationExtra[]
-  changes  ReservationChange[]
-  folio    Folio?
-  payments PaymentIntent[]
-  requests GuestRequest[]
+  contact     Contact             @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  ratePlan    RatePlan            @relation(fields: [ratePlanId], references: [id], onDelete: Restrict)
+  package     Package?            @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  rooms       ReservationRoom[]
+  extras      ReservationExtra[]
+  changes     ReservationChange[]
+  folio       Folio?
+  payments    PaymentIntent[]
+  requests    GuestRequest[]
+  assignments RoomAssignment[]
+  feedback    Feedback?
 
   @@index([status, arrival])
   @@index([arrival, departure])
@@ -1061,6 +1083,109 @@ model GuestRequest {
   status        GuestRequestStatus @default(NEW)
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+}
+
+// ═════════════════════════ Movement IV — the House ═════════════════════════
+
+/// A numbered room given to a reservation for some of its nights (check-in, room moves).
+model RoomAssignment {
+  id                String    @id @default(uuid(7)) @db.Uuid
+  reservationId     String    @db.Uuid
+  reservationRoomId String    @db.Uuid
+  roomId            String    @db.Uuid
+  fromDate          DateTime  @db.Date
+  toDate            DateTime  @db.Date
+  releasedAt        DateTime?
+  createdById       String?   @db.Uuid
+  createdAt         DateTime  @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  room        Room        @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@index([roomId, fromDate, toDate])
+}
+
+enum HkTaskKind {
+  DEPARTURE
+  STAYOVER
+  INSPECTION
+  DEEP_CLEAN
+  MAINTENANCE
+}
+
+enum HkTaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  INSPECTED
+  SKIPPED
+}
+
+model HousekeepingTask {
+  id            String       @id @default(uuid(7)) @db.Uuid
+  roomId        String       @db.Uuid
+  date          DateTime     @db.Date
+  kind          HkTaskKind
+  status        HkTaskStatus @default(TODO)
+  priority      Int          @default(0) @db.SmallInt
+  assigneeId    String?      @db.Uuid
+  notes         String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  completedById String?      @db.Uuid
+  inspectedAt   DateTime?
+  inspectedById String?      @db.Uuid
+  isSeed        Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, date, kind])
+  @@index([date, status])
+}
+
+enum RoomBlockReason {
+  MAINTENANCE
+  OWNER_USE
+  STAFF
+  OUT_OF_ORDER
+}
+
+/// Takes a room off sale for a range of nights (inventory blockedRooms rises with it).
+model RoomBlock {
+  id          String          @id @default(uuid(7)) @db.Uuid
+  roomId      String          @db.Uuid
+  fromDate    DateTime        @db.Date
+  toDate      DateTime        @db.Date
+  reason      RoomBlockReason
+  note        String?
+  createdById String?         @db.Uuid
+  releasedAt  DateTime?
+  createdAt   DateTime        @default(now())
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+enum FeedbackScore {
+  GOOD
+  OK
+  BAD
+}
+
+model Feedback {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  reservationId String        @unique @db.Uuid
+  score         FeedbackScore
+  comment       String?
+  allowPublic   Boolean       @default(false)
+  testimonialId String?       @db.Uuid
+  handledAt     DateTime?
+  handledById   String?       @db.Uuid
+  isSeed        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
 
   reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 }

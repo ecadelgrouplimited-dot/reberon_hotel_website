@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { collectMediaIds, collectRefIds, type Block, type MediaRef, type ResolvedBlock } from '@reberon/contracts';
 import { PrismaService } from '../../common/prisma.service.js';
-import { toMediaRef, toRoomCard, toFacility, toProgress, toDestinationCard, toFaqGroup, pick, toAmenity, lr } from './mappers.js';
+import { toMediaRef, toRoomCard, toFacility, toProgress, toDestinationCard, toFaqGroup, pick, toAmenity, lr, lt } from './mappers.js';
 
 const roomInclude = { hero: true, _count: { select: { rooms: { where: { isActive: true } } } } } as const;
 
@@ -86,6 +86,12 @@ export class ResolverService {
         if (!id) return undefined;
         const g = await this.prisma.faqGroup.findUnique({ where: { id }, include: { items: { orderBy: { order: 'asc' } } } });
         return g ? { group: toFaqGroup(g) } : undefined;
+      }
+      case 'voices': {
+        const limit = typeof b.data.limit === 'number' ? b.data.limit : 6;
+        const rows = await this.prisma.testimonial.findMany({ where: { isPublished: true }, orderBy: { createdAt: 'desc' }, take: limit });
+        if (!rows.length) return undefined;
+        return { voices: rows.map((v) => ({ id: v.id, author: v.author, origin: v.origin, text: lt(v.text), rating: v.rating })) };
       }
       default:
         return undefined;

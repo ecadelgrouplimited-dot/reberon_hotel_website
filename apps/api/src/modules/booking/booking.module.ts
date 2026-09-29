@@ -10,6 +10,6 @@ import { PublicBookingController, PaymentWebhookController, ReservationsAdminCon
   imports: [NotificationsModule],
   controllers: [PublicBookingController, PaymentWebhookController, ReservationsAdminController, RatesAdminController, SellablesAdminController],
   providers: [InventoryService, PricingService, PaymentsService, BookingService],
-  exports: [BookingService],
+  exports: [BookingService, InventoryService, PricingService],
 })
 export class BookingModule {}

@@ -135,6 +135,9 @@ export interface GuestStayDTO {
   checkOut: string;
   payments: { amountMinor: string; status: string; method: string; paidAt: string | null }[];
   canPayBalance: boolean;
+  /** Movement IV: after (or during) the stay the guest may tell us how it was. */
+  canGiveFeedback: boolean;
+  feedback: { score: 'GOOD' | 'OK' | 'BAD'; comment: string | null; allowPublic: boolean } | null;
 }
 
 /* ───────── Admin ───────── */

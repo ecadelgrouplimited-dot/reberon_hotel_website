@@ -1,7 +1,7 @@
 import type { Permission } from '@reberon/contracts';
 import {
   BedDouble, BookOpenText, CalendarRange, CircleHelp, ConciergeBell, FileText, Hammer, Home, Image, Inbox, ListChecks, Map, Navigation, ScrollText,
-  Settings, Shuffle, SprayCan, Building2, Users, Rocket, Gift, Sunset, type LucideIcon,
+  Settings, Shuffle, SprayCan, Building2, Users, Rocket, Gift, Sunset, LayoutGrid, Contact, MessageCircleHeart, ChartColumnBig, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -50,10 +50,14 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
-    label: 'Coming with the building',
+    label: 'The house',
     items: [
-      { label: 'Front desk', href: '#', icon: ConciergeBell, perm: 'dashboard:view', later: 'IV' },
-      { label: 'Housekeeping', href: '#', icon: SprayCan, perm: 'rooms:status', later: 'IV' },
+      { label: 'Front desk', href: '/desk', icon: ConciergeBell, perm: 'desk:operate' },
+      { label: 'Room rack', href: '/rack', icon: LayoutGrid, perm: 'rooms:status' },
+      { label: 'Housekeeping', href: '/housekeeping', icon: SprayCan, perm: 'rooms:status' },
+      { label: 'Guests', href: '/guests', icon: Contact, perm: 'guests:read' },
+      { label: 'Feedback', href: '/feedback', icon: MessageCircleHeart, perm: 'guests:read' },
+      { label: 'Reports', href: '/reports', icon: ChartColumnBig, perm: 'reports:read' },
     ],
   },
   {

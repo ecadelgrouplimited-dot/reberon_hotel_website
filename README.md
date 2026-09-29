@@ -65,5 +65,7 @@ A manager edits a page in the House. The draft autosaves, and the preview beside
 - **Phase 1, Movement I (the Face):** done:
   - the full website
   - the House for content, inbox, first-stay list, media, settings, people and audit
-- **Next, Movement II (the Door):** rates, availability, reservations, Pesapal payments, confirmations and the owner's evening brief. See [`docs/planning/09-roadmap.md`](docs/planning/09-roadmap.md).
+- **Movement II (the Door):** built and verified, switched off (`features.bookingEnabled`) until rates and Pesapal keys are ready.
+- **Movement IV (the House):** built and verified: front desk, room rack, housekeeping, guests and memory, feedback, reports. Sign in as `desk@`, `housekeeping@` or the owner to see each view.
+- **Next:** Movement III (tours and partners) once field data exists; CI and deploy; real Pesapal and SMS. See [`docs/planning/09-roadmap.md`](docs/planning/09-roadmap.md).
 - **Still to settle:** open questions for Denis and Wilson (domain, logo, real phone numbers, room mix, prices) are listed in [`docs/planning/12-decisions-log.md`](docs/planning/12-decisions-log.md). Until then the seed uses clearly marked placeholders, and every image is labelled as a drawing.

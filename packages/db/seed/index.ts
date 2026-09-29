@@ -12,6 +12,7 @@ import { seedNavigation } from './demo/navigation.js';
 import { seedInboxAndWaitlist } from './demo/inbox.js';
 import { seedAudit } from './demo/audit.js';
 import { seedBooking } from './demo/booking.js';
+import { seedArrivalsToday, seedHouse } from './demo/house.js';
 
 const referenceOnly = process.argv.includes('--reference-only');
 
@@ -37,6 +38,8 @@ async function main() {
   await seedInboxAndWaitlist(staff, Object.values(rooms));
   await seedAudit(staff);
   await seedBooking(users['owner@reberonhotel.ug']!, users['desk@reberonhotel.ug']!);
+  await seedHouse({ ownerId: users['owner@reberonhotel.ug']!, deskId: users['desk@reberonhotel.ug']!, housekeepingId: users['housekeeping@reberonhotel.ug']! });
+  await seedArrivalsToday(users['desk@reberonhotel.ug']!);
   const shareImage = await prisma.mediaAsset.findFirst({ where: { storageKey: 'seed/page-share-default' } });
   if (shareImage) await prisma.setting.update({ where: { key: 'seo.shareImageId' }, data: { value: shareImage.id } });
   console.log(`Done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);

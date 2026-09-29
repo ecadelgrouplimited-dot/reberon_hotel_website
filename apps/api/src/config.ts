@@ -16,6 +16,8 @@ const schema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   REVALIDATE_SECRET: z.string().min(16),
   PREVIEW_SECRET: z.string().min(16),
+  /** Encrypts guest ID numbers at rest. Falls back to a key derived from JWT_SECRET in development. */
+  DATA_KEY: z.string().min(32).optional(),
   COOKIE_SECURE: z.coerce.boolean().default(false),
   STORAGE_DRIVER: z.enum(['local']).default('local'),
   STORAGE_LOCAL_DIR: z.string().default('./storage'),

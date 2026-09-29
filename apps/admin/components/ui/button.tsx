@@ -5,7 +5,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'dark';
-type Size = 'sm' | 'md' | 'lg' | 'icon';
+type Size = 'sm' | 'md' | 'lg' | 'touch' | 'icon';
 
 const base = 'inline-flex items-center justify-center gap-2 rounded-full font-semibold whitespace-nowrap transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50';
 const variants: Record<Variant, string> = {
@@ -19,6 +19,8 @@ const sizes: Record<Size, string> = {
   sm: 'h-8 px-3 text-[12.5px]',
   md: 'h-9 px-4 text-[13px]',
   lg: 'h-11 px-5 text-sm',
+  /** 56px: the desk and housekeeping, used standing up, on a tablet or a phone. */
+  touch: 'h-14 px-6 text-[15px]',
   icon: 'size-9',
 };
 

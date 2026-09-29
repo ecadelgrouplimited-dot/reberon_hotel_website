@@ -1,5 +1,7 @@
 'use client';
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Hammer, Image as ImageIcon, FileText } from 'lucide-react';
 import type { DashboardDTO } from '@reberon/contracts';
@@ -21,7 +23,13 @@ function greeting() {
 export default function Today() {
   const me = useMe();
   const can = useCan();
-  const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: () => get<DashboardDTO>('/dashboard'), refetchInterval: 60_000 });
+  const router = useRouter();
+  // Housekeeping has one screen: their list.
+  const landing = !can('dashboard:view') && can('rooms:status');
+  useEffect(() => {
+    if (landing) router.replace('/housekeeping');
+  }, [landing, router]);
+  const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: () => get<DashboardDTO>('/dashboard'), refetchInterval: 60_000, enabled: !landing });
   const today = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Kampala' }).format(new Date());
 
   return (

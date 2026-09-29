@@ -12,6 +12,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { InboxModule } from './modules/inbox/inbox.module.js';
 import { MediaModule } from './modules/media/media.module.js';
+import { BookingModule } from './modules/booking/booking.module.js';
 import { HealthController } from './modules/health.controller.js';
 
 @Module({
@@ -25,6 +26,7 @@ import { HealthController } from './modules/health.controller.js';
     AuthModule,
     InboxModule,
     MediaModule,
+    BookingModule,
   ],
   controllers: [HealthController],
   providers: [

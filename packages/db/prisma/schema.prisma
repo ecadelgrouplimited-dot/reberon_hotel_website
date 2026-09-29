@@ -554,6 +554,7 @@ model Contact {
 
   conversations Conversation[]
   waitlist      WaitlistEntry[]
+  reservations  Reservation[]
 
   @@index([phone])
   @@index([email])
@@ -668,4 +669,398 @@ model WaitlistEntry {
   roomType RoomType? @relation(fields: [roomTypeId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
+}
+
+// ═════════════════════════ Movement II — the Door ═════════════════════════
+// docs/planning/03-data-model.md §7. Money: BigInt minor units + currency.
+
+enum Currency {
+  UGX
+  USD
+}
+
+enum MealPlan {
+  RO
+  BB
+  HB
+  FB
+}
+
+model CancellationPolicy {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      Json
+  /// [{ daysBefore: number, refundPercent: number }] — sorted by daysBefore desc
+  rules     Json
+  text      Json
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ratePlans RatePlan[]
+}
+
+model TaxRule {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  name        Json
+  ratePercent Decimal  @db.Decimal(5, 2)
+  /// true: already inside the price shown (Uganda VAT on accommodation is usually inclusive)
+  inclusive   Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model RatePlan {
+  id                   String   @id @default(uuid(7)) @db.Uuid
+  code                 String   @unique
+  name                 Json
+  description          Json     @default("{}")
+  mealPlan             MealPlan @default(BB)
+  minNights            Int      @default(1) @db.SmallInt
+  depositPercent       Int      @default(30) @db.SmallInt
+  cancellationPolicyId String?  @db.Uuid
+  isActive             Boolean  @default(true)
+  isPublic             Boolean  @default(true)
+  order                Int      @default(0)
+  isSeed               Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  cancellationPolicy CancellationPolicy? @relation(fields: [cancellationPolicyId], references: [id], onDelete: SetNull)
+  rates              Rate[]
+  reservations       Reservation[]
+}
+
+/// One price per plan × room type × night × currency. UGX and USD are both
+/// stored explicitly: never converted.
+model Rate {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  ratePlanId  String   @db.Uuid
+  roomTypeId  String   @db.Uuid
+  date        DateTime @db.Date
+  currency    Currency
+  amountMinor BigInt
+  updatedAt   DateTime @updatedAt
+
+  ratePlan RatePlan @relation(fields: [ratePlanId], references: [id], onDelete: Cascade)
+
+  @@unique([ratePlanId, roomTypeId, date, currency])
+  @@index([roomTypeId, date])
+}
+
+/// Per room type per night. sold + held + blocked may never exceed total (CHECK in migration).
+model InventoryDay {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  roomTypeId        String   @db.Uuid
+  date              DateTime @db.Date
+  totalRooms        Int      @db.SmallInt
+  soldRooms         Int      @default(0) @db.SmallInt
+  heldRooms         Int      @default(0) @db.SmallInt
+  blockedRooms      Int      @default(0) @db.SmallInt
+  stopSell          Boolean  @default(false)
+  closedToArrival   Boolean  @default(false)
+  closedToDeparture Boolean  @default(false)
+  minStay           Int?     @db.SmallInt
+  note              String?
+  updatedAt         DateTime @updatedAt
+
+  @@unique([roomTypeId, date])
+}
+
+model Package {
+  id          String        @id @default(uuid(7)) @db.Uuid
+  slug        String        @unique
+  name        Json
+  summary     Json          @default("{}")
+  body        Json?
+  nights      Int           @default(1) @db.SmallInt
+  inclusions  Json          @default("[]")
+  heroMediaId String?       @db.Uuid
+  galleryIds  String[]      @default([])
+  /// Added to the room total, per stay
+  priceUgx    BigInt?
+  priceUsd    BigInt?
+  status      ContentStatus @default(DRAFT)
+  order       Int           @default(0)
+  isSeed      Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  reservations Reservation[]
+}
+
+enum ExtraKind {
+  TRANSFER
+  GUIDE
+  MEAL
+  BED
+  LATE_CHECKOUT
+  EXPERIENCE
+  OTHER
+}
+
+enum ExtraUnit {
+  PER_STAY
+  PER_NIGHT
+  PER_PERSON
+  PER_TRIP
+}
+
+model Extra {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  slug         String        @unique
+  name         Json
+  summary      Json          @default("{}")
+  kind         ExtraKind
+  unit         ExtraUnit     @default(PER_STAY)
+  priceUgx     BigInt
+  priceUsd     BigInt?
+  mediaId      String?       @db.Uuid
+  isExperience Boolean       @default(false)
+  status       ContentStatus @default(PUBLISHED)
+  order        Int           @default(0)
+  isSeed       Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+}
+
+enum ReservationStatus {
+  HELD
+  CONFIRMED
+  IN_HOUSE
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+  EXPIRED
+}
+
+enum ReservationSource {
+  DIRECT
+  WHATSAPP
+  WALK_IN
+  PHONE
+  PORTAL
+}
+
+/// The booking record. Source of truth; everything else points here.
+model Reservation {
+  id                   String            @id @default(uuid(7)) @db.Uuid
+  code                 String            @unique
+  status               ReservationStatus @default(HELD)
+  source               ReservationSource @default(DIRECT)
+  contactId            String            @db.Uuid
+  ratePlanId           String            @db.Uuid
+  packageId            String?           @db.Uuid
+  arrival              DateTime          @db.Date
+  departure            DateTime          @db.Date
+  adults               Int               @db.SmallInt
+  children             Int               @default(0) @db.SmallInt
+  currency             Currency
+  totalMinor           BigInt
+  paidMinor            BigInt            @default(0)
+  depositMinor         BigInt            @default(0)
+  cancellationSnapshot Json
+  eta                  String?
+  guestNotes           String?
+  staffNotes           String?
+  holdExpiresAt        DateTime?
+  confirmedAt          DateTime?
+  cancelledAt          DateTime?
+  cancelReason         String?
+  createdById          String?           @db.Uuid
+  version              Int               @default(1)
+  isSeed               Boolean           @default(false)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  contact  Contact             @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  ratePlan RatePlan            @relation(fields: [ratePlanId], references: [id], onDelete: Restrict)
+  package  Package?            @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  rooms    ReservationRoom[]
+  extras   ReservationExtra[]
+  changes  ReservationChange[]
+  folio    Folio?
+  payments PaymentIntent[]
+  requests GuestRequest[]
+
+  @@index([status, arrival])
+  @@index([arrival, departure])
+}
+
+model ReservationRoom {
+  id            String  @id @default(uuid(7)) @db.Uuid
+  reservationId String  @db.Uuid
+  roomTypeId    String  @db.Uuid
+  roomId        String? @db.Uuid
+  quantity      Int     @default(1) @db.SmallInt
+  /// [{ date, amountMinor }] per room, frozen at booking time
+  nightly       Json
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+}
+
+model ReservationExtra {
+  id            String  @id @default(uuid(7)) @db.Uuid
+  reservationId String  @db.Uuid
+  extraId       String  @db.Uuid
+  quantity      Int     @default(1) @db.SmallInt
+  unitMinor     BigInt
+  totalMinor    BigInt
+  note          String?
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+}
+
+model ReservationChange {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  reservationId String   @db.Uuid
+  kind          String
+  summary       String
+  before        Json?
+  after         Json?
+  actorId       String?  @db.Uuid
+  createdAt     DateTime @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+}
+
+enum FolioLineKind {
+  ROOM
+  EXTRA
+  PACKAGE
+  TAX
+  FNB
+  ADJUSTMENT
+  PAYMENT
+  REFUND
+}
+
+model Folio {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  reservationId String   @unique @db.Uuid
+  currency      Currency
+  isClosed      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  lines       FolioLine[]
+}
+
+/// Append-only ledger. Charges positive, payments/refunds negative. Corrections are reversing lines.
+model FolioLine {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  folioId        String        @db.Uuid
+  kind           FolioLineKind
+  description    String
+  date           DateTime      @db.Date
+  quantity       Int           @default(1)
+  amountMinor    BigInt
+  paymentId      String?       @db.Uuid
+  reversesLineId String?       @db.Uuid
+  postedById     String?       @db.Uuid
+  createdAt      DateTime      @default(now())
+
+  folio Folio @relation(fields: [folioId], references: [id], onDelete: Cascade)
+
+  @@index([folioId, createdAt])
+}
+
+enum PaymentPurpose {
+  DEPOSIT
+  FULL
+  BALANCE
+  EXTRA
+}
+
+enum PaymentMethod {
+  MOBILE_MONEY
+  CARD
+  CASH
+  BANK
+  UNKNOWN
+}
+
+enum PaymentProvider {
+  PESAPAL
+  TEST
+  MANUAL
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+model PaymentIntent {
+  id                 String          @id @default(uuid(7)) @db.Uuid
+  reservationId      String          @db.Uuid
+  purpose            PaymentPurpose
+  amountMinor        BigInt
+  currency           Currency
+  method             PaymentMethod   @default(UNKNOWN)
+  provider           PaymentProvider
+  status             PaymentStatus   @default(PENDING)
+  merchantReference  String          @unique
+  providerTrackingId String?         @unique
+  providerStatus     String?
+  confirmationCode   String?
+  redirectUrl        String?
+  recordedById       String?         @db.Uuid
+  note               String?
+  expiresAt          DateTime?
+  paidAt             DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  reservation Reservation    @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  events      PaymentEvent[]
+
+  @@index([status, createdAt])
+}
+
+/// Every provider notification, stored once (providerEventId unique) — webhooks are safe to receive twice.
+model PaymentEvent {
+  id              String          @id @default(uuid(7)) @db.Uuid
+  paymentIntentId String?         @db.Uuid
+  provider        PaymentProvider
+  providerEventId String          @unique
+  payload         Json
+  processedAt     DateTime?
+  createdAt       DateTime        @default(now())
+
+  paymentIntent PaymentIntent? @relation(fields: [paymentIntentId], references: [id], onDelete: SetNull)
+}
+
+enum GuestRequestKind {
+  EXTRA
+  LATE_CHECKOUT
+  GUIDE
+  TRANSFER
+  ADD_NIGHT
+  OTHER
+}
+
+enum GuestRequestStatus {
+  NEW
+  ACCEPTED
+  DECLINED
+  DONE
+}
+
+model GuestRequest {
+  id            String             @id @default(uuid(7)) @db.Uuid
+  reservationId String             @db.Uuid
+  kind          GuestRequestKind
+  extraId       String?            @db.Uuid
+  note          String?
+  status        GuestRequestStatus @default(NEW)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 }

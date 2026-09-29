@@ -23,6 +23,7 @@ async function bootstrap() {
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(compression());
   app.use(cookieParser());
+  app.use('/v1/webhooks', express.urlencoded({ extended: false }));
   app.enableCors({
     origin: [env.WEB_URL, env.ADMIN_URL],
     credentials: true,

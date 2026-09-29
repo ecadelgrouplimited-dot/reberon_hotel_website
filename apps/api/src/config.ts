@@ -26,6 +26,12 @@ const schema = z.object({
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().default('Reberon Hotel <hello@reberonhotel.ug>'),
   TURNSTILE_SECRET: z.string().optional(),
+  /** TEST = simulated payments (never in production). PESAPAL = real money. */
+  PAYMENT_PROVIDER: z.enum(['TEST', 'PESAPAL']).default('TEST'),
+  PESAPAL_ENV: z.enum(['sandbox', 'live']).default('sandbox'),
+  PESAPAL_CONSUMER_KEY: z.string().optional(),
+  PESAPAL_CONSUMER_SECRET: z.string().optional(),
+  BOOKING_HOLD_MINUTES: z.coerce.number().int().min(5).max(120).default(20),
 });
 
 const parsed = schema.safeParse(process.env);

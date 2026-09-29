@@ -5,3 +5,4 @@ export * from './blocks.js';
 export * from './permissions.js';
 export * from './dto.js';
 export * from './inputs.js';
+export * from './booking.js';

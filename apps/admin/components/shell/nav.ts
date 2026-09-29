@@ -1,7 +1,7 @@
 import type { Permission } from '@reberon/contracts';
 import {
   BedDouble, BookOpenText, CalendarRange, CircleHelp, ConciergeBell, FileText, Hammer, Home, Image, Inbox, ListChecks, Map, Navigation, ScrollText,
-  Settings, Shuffle, SprayCan, Building2, Users, Rocket, type LucideIcon,
+  Settings, Shuffle, SprayCan, Building2, Users, Rocket, Gift, Sunset, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -41,10 +41,17 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    label: 'Bookings',
+    items: [
+      { label: 'Reservations', href: '/reservations', icon: BookOpenText, perm: 'bookings:read' },
+      { label: 'Calendar & rates', href: '/calendar', icon: CalendarRange, perm: 'rates:read' },
+      { label: 'Extras & packages', href: '/sellables', icon: Gift, perm: 'rates:read' },
+      { label: 'Owner brief', href: '/brief', icon: Sunset, perm: 'bookings:read' },
+    ],
+  },
+  {
     label: 'Coming with the building',
     items: [
-      { label: 'Reservations', href: '#', icon: BookOpenText, perm: 'dashboard:view', later: 'II' },
-      { label: 'Calendar & rates', href: '#', icon: CalendarRange, perm: 'dashboard:view', later: 'II' },
       { label: 'Front desk', href: '#', icon: ConciergeBell, perm: 'dashboard:view', later: 'IV' },
       { label: 'Housekeeping', href: '#', icon: SprayCan, perm: 'rooms:status', later: 'IV' },
     ],

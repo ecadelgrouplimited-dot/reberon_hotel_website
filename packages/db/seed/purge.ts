@@ -4,6 +4,15 @@ import { mediaKeys } from '@reberon/media';
 /** Remove every demo row (isSeed = true). Reference data stays. Run before launch. */
 async function main() {
   const media = await prisma.mediaAsset.findMany({ where: { isSeed: true }, select: { id: true } });
+  // Movement II demo: payments first (they restrict deletes), then reservations (folio cascades).
+  const demoRes = await prisma.reservation.findMany({ where: { isSeed: true }, select: { id: true } });
+  await prisma.$transaction([
+    prisma.paymentIntent.deleteMany({ where: { reservationId: { in: demoRes.map((r) => r.id) } } }),
+    prisma.reservation.deleteMany({ where: { isSeed: true } }),
+    prisma.inventoryDay.deleteMany({}),
+    prisma.extra.deleteMany({ where: { isSeed: true } }),
+    prisma.package.deleteMany({ where: { isSeed: true } }),
+  ]);
   const counts = await prisma.$transaction([
     prisma.auditLog.deleteMany({ where: { isSeed: true } }),
     prisma.waitlistEntry.deleteMany({ where: { isSeed: true } }),

@@ -26,7 +26,7 @@ function MediaInner() {
   const params = useSearchParams();
   const [q, setQ] = useState('');
   const [folder, setFolder] = useState('');
-  const [rendering, setRendering] = useState('');
+  const [rendering, setRendering] = useState(params.get('rendering') ?? '');
   const [openId, setOpenId] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
   const input = useRef<HTMLInputElement>(null);

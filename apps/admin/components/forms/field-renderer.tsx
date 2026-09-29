@@ -1,14 +1,14 @@
 'use client';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, GripVertical, ImagePlus, Plus, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, ImagePlus, Plus, Trash2, Upload, X } from 'lucide-react';
 import { BLOCKS, BLOCK_MAP, CTA_ACTIONS, type Block, type FieldDef, type RefEntity, type Cta } from '@reberon/contracts';
 import { t, type LText, type LRich } from '@reberon/contracts/text';
 import { get, thumb } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { FieldShell, Switch } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
-import { MediaPicker } from '@/components/media/media-picker';
+import { MediaPicker, useUpload } from '@/components/media/media-picker';
 import { RichEditor } from './rich-editor';
 
 /** Extra field kinds used by entity editors (on top of the block FieldDefs). */
@@ -147,20 +147,66 @@ function Field({ def, value, onChange, error, errors, path }: { def: Exclude<Adm
   }
 }
 
+/** Thumbnail that waits for server-side processing (retries until the resized file exists). */
+function Thumb({ id }: { id: string }) {
+  const [attempt, setAttempt] = useState(0);
+  const [failed, setFailed] = useState(false);
+  return failed && attempt >= 12 ? (
+    <span className="grid size-full place-items-center p-2 text-center text-[10.5px] text-fg-subtle">Still processing…</span>
+  ) : (
+    <>
+      <img
+        key={attempt}
+        src={`${thumb(id, 320)}${attempt ? `?r=${attempt}` : ''}`}
+        alt=""
+        className="size-full object-cover"
+        onError={() => {
+          setFailed(true);
+          if (attempt < 12) setTimeout(() => setAttempt((a) => a + 1), 1500);
+        }}
+        onLoad={() => setFailed(false)}
+      />
+      {failed && <span className="absolute inset-0 grid place-items-center bg-surface-2/80 text-[10.5px] text-fg-subtle">Processing…</span>}
+    </>
+  );
+}
+
 function MediaField({ label, help, error, ids, onChange, multiple }: { label: string; help?: string; error?: string; ids: string[]; onChange: (ids: string[]) => void; multiple?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [drag, setDrag] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { upload, busy } = useUpload();
   const move = (i: number, d: number) => {
     const n = [...ids];
     const [x] = n.splice(i, 1);
     n.splice(i + d, 0, x!);
     onChange(n);
   };
+  const addFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (!list.length) return;
+    const up = await upload(multiple ? list : list.slice(0, 1));
+    const newIds = up.map((u) => u.id);
+    if (newIds.length) onChange(multiple ? [...ids, ...newIds] : newIds.slice(0, 1));
+  };
   return (
-    <FieldShell label={label} hint={help} error={error}>
-      <div className="flex flex-wrap gap-2">
+    <FieldShell label={label} hint={help ?? (multiple ? 'Drop photos here, or add from the library. The first is the main one.' : undefined)} error={error}>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDrag(true);
+        }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDrag(false);
+          void addFiles(e.dataTransfer.files);
+        }}
+        className={cn('flex flex-wrap gap-2 rounded-xl p-1 transition', drag && 'bg-brand/5 outline-2 outline-dashed outline-brand')}
+      >
         {ids.map((id, i) => (
           <div key={id + i} className="group relative size-24 overflow-hidden rounded-xl border border-line bg-surface-2">
-            <img src={thumb(id, 320)} alt="" className="size-full object-cover" />
+            <Thumb id={id} />
             {i === 0 && multiple && <span className="absolute left-1 top-1 rounded bg-basalt-950/70 px-1.5 text-[10px] font-semibold text-white">Main</span>}
             <div className="absolute inset-x-0 bottom-0 flex justify-center gap-0.5 bg-basalt-950/60 p-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
               {multiple && i > 0 && (
@@ -173,14 +219,25 @@ function MediaField({ label, help, error, ids, onChange, multiple }: { label: st
             </div>
           </div>
         ))}
+        {Array.from({ length: busy }, (_, i) => (
+          <div key={`up${i}`} className="grid size-24 place-items-center rounded-xl border border-dashed border-brand/50 bg-brand/5 text-[11px] text-brand">
+            <span className="grid justify-items-center gap-1"><Upload className="size-4 animate-pulse" />Uploading</span>
+          </div>
+        ))}
         {(multiple || !ids.length) && (
-          <button type="button" onClick={() => setOpen(true)} className="grid size-24 place-items-center rounded-xl border border-dashed border-line-strong text-fg-subtle transition-colors hover:border-brand hover:text-brand">
-            <span className="grid justify-items-center gap-1 text-[11.5px] font-medium"><ImagePlus className="size-5" />{multiple ? 'Add' : 'Choose'}</span>
-          </button>
+          <>
+            <button type="button" onClick={() => fileRef.current?.click()} className="grid size-24 place-items-center rounded-xl border border-dashed border-line-strong text-fg-subtle transition-colors hover:border-brand hover:text-brand">
+              <span className="grid justify-items-center gap-1 text-[11.5px] font-medium"><Upload className="size-5" />Upload</span>
+            </button>
+            <button type="button" onClick={() => setOpen(true)} className="grid size-24 place-items-center rounded-xl border border-dashed border-line-strong text-fg-subtle transition-colors hover:border-brand hover:text-brand">
+              <span className="grid justify-items-center gap-1 text-[11.5px] font-medium"><ImagePlus className="size-5" />Library</span>
+            </button>
+          </>
         )}
         {!multiple && ids.length > 0 && (
           <Button size="sm" className="self-end" onClick={() => setOpen(true)}>Replace</Button>
         )}
+        <input ref={fileRef} type="file" accept="image/*" multiple={multiple} hidden onChange={(e) => { if (e.target.files) void addFiles(e.target.files); e.target.value = ''; }} />
       </div>
       <MediaPicker open={open} onClose={() => setOpen(false)} multiple={multiple} initial={multiple ? [] : ids} onPick={(picked) => onChange(multiple ? [...ids, ...picked.filter((p) => !ids.includes(p))] : picked.slice(0, 1))} />
     </FieldShell>

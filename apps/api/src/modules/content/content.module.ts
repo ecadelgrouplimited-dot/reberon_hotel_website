@@ -10,13 +10,14 @@ import {
 } from './catalog.admin.controller.js';
 import { SettingsAdminController } from './settings.admin.controller.js';
 import { MediaReplaceController } from './media-replace.controller.js';
+import { SiteOverviewController } from './overview.controller.js';
 import { RevalidationListener, SiteStatusController } from './revalidation.listener.js';
 import { SchedulerService } from './scheduler.service.js';
 
 @Module({
   controllers: [
     PublicContentController, PagesAdminController, RoomsAdminController, FacilitiesAdminController, DestinationsAdminController,
-    ProgressAdminController, FaqAdminController, SiteStructureAdminController, SettingsAdminController, SiteStatusController, MediaReplaceController,
+    ProgressAdminController, FaqAdminController, SiteStructureAdminController, SettingsAdminController, SiteStatusController, MediaReplaceController, SiteOverviewController,
   ],
   providers: [ResolverService, SettingsService, PagesService, ContentOps, RevalidationListener, SchedulerService],
   exports: [ResolverService, SettingsService],

@@ -13,16 +13,17 @@ import { NAV } from './nav';
 import { CommandPalette } from './command-palette';
 import { WebsiteHealth } from './website-health';
 
-function useBadges(enabled: boolean) {
+function useBadges(enabled: boolean, canContent: boolean) {
   const inbox = useQuery({ queryKey: ['badge', 'inbox'], queryFn: () => get<{ counts: Record<string, number> }>('/conversations?limit=1'), enabled, refetchInterval: 60_000 });
   const wl = useQuery({ queryKey: ['badge', 'waitlist'], queryFn: () => get<{ counts: Record<string, number> }>('/waitlist?status=NEW'), enabled, refetchInterval: 120_000 });
-  return { inbox: inbox.data?.counts.NEW ?? 0, waitlist: wl.data?.counts.NEW ?? 0 };
+  const pages = useQuery({ queryKey: ['pages'], queryFn: () => get<{ hasUnpublishedChanges: boolean; status: string }[]>('/pages'), enabled: canContent, refetchInterval: 120_000 });
+  return { inbox: inbox.data?.counts.NEW ?? 0, waitlist: wl.data?.counts.NEW ?? 0, publishing: pages.data?.filter((p) => p.hasUnpublishedChanges && p.status !== 'SCHEDULED').length ?? 0 };
 }
 
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: me } = useMeQuery();
-  const badges = useBadges(!!me);
+  const badges = useBadges(!!me?.permissions.includes('inbox:read'), !!me?.permissions.includes('content:read'));
   const can = (p: string) => !!me?.permissions.includes(p);
   return (
     <div className="flex h-full flex-col bg-[var(--sidebar)] text-[var(--sidebar-fg)]">

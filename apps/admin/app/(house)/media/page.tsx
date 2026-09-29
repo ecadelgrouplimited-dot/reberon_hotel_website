@@ -3,7 +3,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ImagePlus, Link as LinkIcon, Search, Trash2, Upload } from 'lucide-react';
+import { ImagePlus, Link as LinkIcon, Replace, Search, Trash2, Upload } from 'lucide-react';
 import type { AdminMediaDTO } from '@reberon/contracts';
 import { t } from '@reberon/contracts/text';
 import { ApiError, del, get, patch, thumb } from '@/lib/api';
@@ -15,7 +15,8 @@ import { PageHeader, Pill, Skeleton } from '@/components/ui/bits';
 import { Dialog } from '@/components/ui/dialog';
 import { Switch, TextArea, TextInput } from '@/components/ui/field';
 import { useConfirm } from '@/components/ui/confirm';
-import { useUpload } from '@/components/media/media-picker';
+import { MediaPicker, useUpload } from '@/components/media/media-picker';
+import { post } from '@/lib/api';
 
 type Page = { data: AdminMediaDTO[]; nextCursor: string | null; total: number; folders: { name: string | null; count: number }[] };
 type Detail = AdminMediaDTO & { uploadedBy: string | null; usages: { type: string; label: string; href: string }[] };
@@ -124,6 +125,17 @@ function MediaDrawer({ id, onClose }: { id: string | null; onClose: () => void }
     onError: (e) => toast.error(e instanceof ApiError ? e.message : 'Could not delete'),
   });
   const editable = can('media:manage');
+  const [picking, setPicking] = useState(false);
+  const replace = useMutation({
+    mutationFn: (withId: string) => post<{ rooms: number; facilities: number; progress: number; destinations: number; pages: number; settings: number; republished: string[]; draftOnly: number }>(`/media/${id}/replace`, { withId }),
+    onSuccess: (r) => {
+      const parts = [r.rooms && `${r.rooms} room${r.rooms > 1 ? 's' : ''}`, r.facilities && `${r.facilities} facilit${r.facilities > 1 ? 'ies' : 'y'}`, r.destinations && `${r.destinations} stor${r.destinations > 1 ? 'ies' : 'y'}`, r.progress && `${r.progress} update${r.progress > 1 ? 's' : ''}`, r.pages && `${r.pages} page${r.pages > 1 ? 's' : ''}`, r.settings && 'settings'].filter(Boolean);
+      toast.success(`Replaced in ${parts.join(', ') || 'nothing'}.${r.draftOnly ? ` ${r.draftOnly} page(s) had unpublished work — publish them to show the new photo.` : ' Live on the website.'}`, { duration: 8000 });
+      qc.invalidateQueries();
+      onClose();
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : 'Could not replace'),
+  });
   return (
     <Dialog drawer open={!!id} onClose={onClose} title={m?.originalName ?? 'Loading…'} description={m ? `${m.width ?? '?'}×${m.height ?? '?'} · ${bytes(m.bytes)} · ${dateShort(m.createdAt)}${m.uploadedBy ? ` · ${m.uploadedBy}` : ''}` : undefined}>
       {!m ? <Skeleton className="h-80" /> : (
@@ -174,6 +186,20 @@ function MediaDrawer({ id, onClose }: { id: string | null; onClose: () => void }
               </ul>
             ) : <p className="text-[13px] text-fg-muted">Not used anywhere yet.</p>}
           </div>
+          {editable && can('content:write') && m.usages.length > 0 && (
+            <div className="rounded-xl border border-line bg-surface-2/50 p-4">
+              <p className="text-[13px] font-semibold">Replace everywhere</p>
+              <p className="mt-1 text-[12.5px] text-fg-muted">Swap this {m.isRendering ? 'drawing' : 'image'} for a real photograph in all {m.usages.length} place{m.usages.length > 1 ? 's' : ''} at once. Pages that were fully published go live immediately.</p>
+              <Button className="mt-3" variant="dark" icon={<Replace className="size-4" />} loading={replace.isPending} onClick={() => setPicking(true)}>Choose the new photo</Button>
+              <MediaPicker
+                open={picking}
+                onClose={() => setPicking(false)}
+                onPick={async ([withId]) => {
+                  if (withId && (await confirm({ title: `Use the new photo in ${m.usages.length} place${m.usages.length > 1 ? 's' : ''}?`, body: 'Rooms, stories, updates and published pages switch to it now. Pages with unpublished edits get it in their draft.', confirm: 'Replace everywhere' }))) replace.mutate(withId);
+                }}
+              />
+            </div>
+          )}
           {editable && (
             <Button variant="danger" className="justify-self-start" icon={<Trash2 className="size-4" />} disabled={m.usages.length > 0} loading={remove.isPending} onClick={async () => (await confirm({ title: `Delete ${m.originalName}?`, body: 'The file and all its sizes are removed.', confirm: 'Delete', danger: true })) && remove.mutate()}>
               {m.usages.length ? 'In use — replace it first' : 'Delete'}

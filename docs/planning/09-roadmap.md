@@ -1,0 +1,62 @@
+# 09 · Roadmap
+
+Phases map to the spec's Movements. Each phase ends with a demo on staging and the acceptance checklist signed off.
+
+## Phase 0 — Foundation
+
+| # | Deliverable | Done when |
+|---|---|---|
+| 0.1 | Monorepo (pnpm + Turborepo), shared tsconfig/eslint/prettier, Husky + lint-staged, commit convention | `pnpm dev` starts web :3000, admin :3001, api :4000 |
+| 0.2 | `infra/docker-compose.yml`: Postgres 16, Redis 7, MinIO, Mailpit | `pnpm infra:up` healthy |
+| 0.3 | `packages/db`: Prisma schema for Movement I (+ `Room`, `AuditLog`), first migration | `pnpm db:migrate` clean |
+| 0.4 | `packages/contracts`: enums, block schemas, public/admin DTOs | Types import in all three apps |
+| 0.5 | `packages/ui`: tokens, fonts, base primitives | Token page renders light + dark |
+| 0.6 | API skeleton: config validation, pino, problem+json filter, zod pipe, health, OpenAPI, rate limiter, Redis, BullMQ | `/v1/health` green, `/api/docs` lists routes |
+| 0.7 | Auth + RBAC + audit interceptor | Login/refresh/logout e2e tests pass; role guard tests |
+| 0.8 | Media pipeline (upload → variants → blurhash) | Upload in admin shows processed variants |
+| 0.9 | Seed pipeline (reference + demo + placeholder media generator + purge) | Fresh clone → one command → full site |
+| 0.10 | CI: lint, typecheck, unit, api e2e (Postgres service), build | Green on PR |
+
+## Phase 1 — Movement I · Face
+
+| # | Deliverable | Acceptance |
+|---|---|---|
+| 1.1 | Public API: site, pages (resolved blocks), rooms, facilities, destinations, progress, FAQs, redirects | Contract tests; only published data leaks |
+| 1.2 | Web shell: header, mobile nav, sticky action bar, footer, theme + currency toggles, 404 | Lighthouse ≥ 95 mobile on shell |
+| 1.3 | Block renderer + all Movement I block components with motion | Every block renders from seed on a demo page; reduced-motion verified |
+| 1.4 | Pages: home, rooms index/detail, about, rising, facilities, Kapchorwa index/detail, first stay, contact, legal, catch-all | All seed pages render; SEO/JSON-LD validated |
+| 1.5 | Forms: enquiry + waitlist (Server Actions, Turnstile, idempotent, no-JS) | Submission appears in admin inbox/waitlist < 2 s; ack sent |
+| 1.6 | WhatsApp click-to-chat with context + intent logging | wa.me message contains page/room/dates + ref |
+| 1.7 | Revalidation + preview (draft mode) | Publish → live ≤ 10 s; preview shows drafts only to signed-in managers |
+| 1.8 | Admin shell: login, layout, command palette, dashboard | Role-based nav; HK cannot open website screens |
+| 1.9 | Admin: page builder with live preview, versions, schedule | Manager rebuilds home page from blocks without help |
+| 1.10 | Admin: rooms, amenities, facilities, destination, progress, FAQs, navigation, redirects | CRUD + reorder + publish for each |
+| 1.11 | Admin: media library | Focal point, alt text enforced, usages, delete protection |
+| 1.12 | Admin: inbox + waitlist | Assign, reply (email), notes, status, CSV export |
+| 1.13 | Admin: settings, users & invitations, audit log | OWNER-only walls enforced in API tests |
+| 1.14 | Performance, a11y and SEO pass; content load with real copy/photos | Targets in [01 §6](01-product-scope.md) met |
+| 1.15 | Production deploy, backups, monitoring, purge demo, go-live | `reberonhotel.ug` live |
+
+## Phase 2 — Movement II · Door (starts when rates exist)
+
+Inventory calendar & holds → rate plans & two-currency rates → taxes & cancellation policies → packages & extras → reservations (create/amend/cancel, reference codes) → Pesapal intents + IPN webhook + folio ledger → confirmations (email/SMS/WhatsApp templates) → guest lookup + add a night + requests → waitlist conversion → WhatsApp Cloud API → jobs (hold expiry, pre-arrival, 19:00 owner brief) → owner screen → vault.
+
+**Acceptance highlights:** two phones cannot take the last room (concurrency test); webhook replay posts once; UGX and USD never converted silently; confirmation facts identical across channels.
+
+## Phase 3 — Movement III · Walk
+
+Tour records + embeds on room pages and checkout, hotspots, pre-opening → live swap in the same slot, hall empty/set, tour analytics.
+
+## Phase 4 — Movement IV · House
+
+Physical rooms & rack, housekeeping flow, desk (arrivals, in-house, departures, check-in/out, walk-in, folio), guests & memory with merge, feedback → public reviews, occupancy/ADR/source mix.
+
+## Later
+
+Events & hall (M17), F&B posting (M18), group quotes (M19), channels (M20), additional languages, guide capacity.
+
+## Working rhythm
+
+- Weekly demo on staging; decisions recorded in [12](12-decisions-log.md).
+- Each deliverable = one PR with tests, screenshots (admin/web), and updated docs if behaviour changed.
+- Content track runs in parallel from Phase 1 start: real copy, photos, drawings, confirmed facts from [08 §4](08-seed-data.md).

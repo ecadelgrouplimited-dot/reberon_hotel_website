@@ -2,6 +2,18 @@
 
 Phases map to the spec's Movements. Each phase ends with a demo on staging and the acceptance checklist signed off.
 
+## Status (2026-09-29)
+
+- **Phase 0:** done. MinIO is deferred (ADR-015), and CI is still to wire up (0.10).
+- **Phase 1:** done except 1.15 (production deploy). That waits on the domain and hosting decisions (Q2, Q9).
+
+Verified end to end in a real browser:
+- publish → live on the website in under 1 second
+- enquiry and first-stay forms work with and without JavaScript
+- a photo upload appears on `/rising`
+
+The API integration suite (19 tests) passes.
+
 ## Phase 0 — Foundation
 
 | # | Deliverable | Done when |

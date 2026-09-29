@@ -1,0 +1,154 @@
+/*
+ * Highland design tokens — docs/planning/05-design-system.md
+ * Tailwind v4: palette + scale live in @theme; semantic aliases are CSS variables
+ * that flip for "Night on Elgon" (dark).
+ */
+@theme {
+  --font-display: var(--font-fraunces), 'Iowan Old Style', Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --color-basalt-950: #121513;
+  --color-basalt-900: #1a1e1b;
+  --color-basalt-800: #262b27;
+  --color-basalt-700: #353b36;
+  --color-moss-900: #1e2b24;
+  --color-moss-700: #2f4a3a;
+  --color-moss-500: #4f6f58;
+  --color-moss-300: #8fa994;
+  --color-bamboo-400: #8fa06a;
+  --color-cherry-800: #6b1a1c;
+  --color-cherry-700: #7f1f21;
+  --color-cherry-600: #9e2a2b;
+  --color-cherry-400: #c9484a;
+  --color-roast-800: #3e281d;
+  --color-roast-600: #5a3a2a;
+  --color-gold-500: #cf8f2e;
+  --color-gold-400: #e0a54b;
+  --color-gold-200: #f3d9b1;
+  --color-sipi-400: #7fa7b5;
+  --color-mist-50: #f4f5f1;
+  --color-mist-100: #eceee8;
+  --color-parchment-100: #f6f1e7;
+  --color-parchment-200: #ede4d3;
+  --color-stone-200: #e2ded4;
+  --color-stone-300: #cfcbc0;
+  --color-stone-500: #7c786e;
+  --color-stone-600: #5f5b53;
+
+  --text-step--1: clamp(0.83rem, 0.8rem + 0.1vw, 0.9rem);
+  --text-step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --text-step-1: clamp(1.25rem, 1.17rem + 0.4vw, 1.5rem);
+  --text-step-2: clamp(1.56rem, 1.4rem + 0.8vw, 2rem);
+  --text-step-3: clamp(1.95rem, 1.66rem + 1.4vw, 2.66rem);
+  --text-step-4: clamp(2.44rem, 1.95rem + 2.4vw, 3.55rem);
+  --text-step-5: clamp(3.05rem, 2.25rem + 4vw, 4.74rem);
+  --text-step-6: clamp(3.4rem, 2.2rem + 6.2vw, 6.6rem);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 24px;
+  --radius-xl: 36px;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-warm: var(--bg-warm);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-brand: var(--brand);
+  --color-focus: var(--focus);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f4f5f1;
+  --bg-warm: #f6f1e7;
+  --surface: #ffffff;
+  --surface-2: #eceee8;
+  --fg: #121513;
+  --fg-muted: #4a4f4b;
+  --fg-subtle: #7c786e;
+  --line: #e2ded4;
+  --line-strong: #cfcbc0;
+  --accent: #9e2a2b;
+  --accent-hover: #7f1f21;
+  --accent-fg: #ffffff;
+  --brand: #2f4a3a;
+  --focus: #cf8f2e;
+  --success: #2f6b45;
+  --warning: #b7791f;
+  --danger: #9e2a2b;
+  --info: #3f7a8c;
+  --shadow-soft: 0 1px 2px rgb(18 21 19 / 0.04), 0 8px 24px -8px rgb(18 21 19 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(18 21 19 / 0.05), 0 24px 48px -16px rgb(18 21 19 / 0.22);
+  --glass: rgb(244 245 241 / 0.72);
+}
+
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0e110f;
+  --bg-warm: #14120e;
+  --surface: #171b18;
+  --surface-2: #1f2420;
+  --fg: #eceae3;
+  --fg-muted: #b9b6ad;
+  --fg-subtle: #8a867b;
+  --line: #2a302b;
+  --line-strong: #3a413b;
+  --accent: #c9484a;
+  --accent-hover: #d9605f;
+  --accent-fg: #ffffff;
+  --brand: #8fa994;
+  --focus: #e0a54b;
+  --success: #6fb58a;
+  --warning: #e0a54b;
+  --danger: #e06a6b;
+  --info: #7fa7b5;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -8px rgb(0 0 0 / 0.5);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.3), 0 24px 48px -16px rgb(0 0 0 / 0.6);
+  --glass: rgb(14 17 15 / 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #0e110f;
+    --bg-warm: #14120e;
+    --surface: #171b18;
+    --surface-2: #1f2420;
+    --fg: #eceae3;
+    --fg-muted: #b9b6ad;
+    --fg-subtle: #8a867b;
+    --line: #2a302b;
+    --line-strong: #3a413b;
+    --accent: #c9484a;
+    --accent-hover: #d9605f;
+    --accent-fg: #ffffff;
+    --brand: #8fa994;
+    --focus: #e0a54b;
+    --success: #6fb58a;
+    --warning: #e0a54b;
+    --danger: #e06a6b;
+    --info: #7fa7b5;
+    --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -8px rgb(0 0 0 / 0.5);
+    --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.3), 0 24px 48px -16px rgb(0 0 0 / 0.6);
+    --glass: rgb(14 17 15 / 0.7);
+  }
+}

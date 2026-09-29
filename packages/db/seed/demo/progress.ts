@@ -1,7 +1,7 @@
 import { rt } from '@reberon/contracts';
 import { slugify } from '@reberon/utils';
 import type { Milestone } from '../../src/index.js';
-import { prisma, en, log, seedImage } from '../lib.js';
+import { prisma, en, log, seedImage, REFRESH } from '../lib.js';
 
 const UPDATES: { date: string; title: string; body: string; milestone?: Milestone; percent: number; photos: number }[] = [
   { date: '2025-11-14', title: 'Ground broken', milestone: 'GROUNDBREAKING', percent: 2, photos: 3, body: 'A short prayer, a long lunch, and the first spade in red Kapchorwa soil. The surveyors have marked where ten rooms and a hall will stand.' },
@@ -23,7 +23,11 @@ export async function seedProgress() {
   let n = 0;
   for (const u of UPDATES) {
     const slug = slugify(u.title);
-    if (await prisma.progressUpdate.findUnique({ where: { slug } })) continue;
+    const existing = await prisma.progressUpdate.findUnique({ where: { slug } });
+    if (existing) {
+      if (REFRESH && existing.isSeed) await prisma.progressUpdate.update({ where: { id: existing.id }, data: { title: en(u.title), body: rt.md(u.body), milestone: u.milestone ?? null, percentComplete: u.percent } });
+      continue;
+    }
     const mediaIds: string[] = [];
     for (let i = 0; i < u.photos; i++) {
       mediaIds.push(

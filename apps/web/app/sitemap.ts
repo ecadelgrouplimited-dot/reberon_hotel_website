@@ -1,0 +1,15 @@
+import type { MetadataRoute } from 'next';
+import { api } from '@/lib/api';
+import { WEB_URL } from '@/lib/seo';
+
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const pages = await api.pageIndex().catch(() => []);
+  return pages.map((p) => ({
+    url: `${WEB_URL}${p.path === '/' ? '' : p.path}`,
+    lastModified: p.updatedAt,
+    changeFrequency: p.path.startsWith('/rising') ? 'monthly' : 'weekly',
+    priority: p.path === '/' ? 1 : p.path.split('/').length === 2 ? 0.8 : 0.6,
+  }));
+}

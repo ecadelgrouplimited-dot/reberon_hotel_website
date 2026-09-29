@@ -1,5 +1,5 @@
 import { rt } from '@reberon/contracts';
-import { prisma, en, log, seedImage } from '../lib.js';
+import { prisma, en, log, seedImage, REFRESH } from '../lib.js';
 import type { Scene } from '../media/art.js';
 
 interface RoomSeed {
@@ -160,7 +160,8 @@ export async function seedRooms() {
       seo: { description: en(`${r.name} at Reberon Hotel, Kapchorwa. ${r.tagline}`) },
       isSeed: true,
     };
-    const rt_ = await prisma.roomType.upsert({ where: { slug: r.slug }, create: { slug: r.slug, ...data }, update: {} });
+    const existing = await prisma.roomType.findUnique({ where: { slug: r.slug }, select: { isSeed: true } });
+    const rt_ = await prisma.roomType.upsert({ where: { slug: r.slug }, create: { slug: r.slug, ...data }, update: REFRESH && existing?.isSeed ? data : {} });
     ids[r.slug] = rt_.id;
     await prisma.roomTypeAmenity.createMany({
       data: r.amenities.map((k, i) => ({ roomTypeId: rt_.id, amenityId: amenityId.get(k)!, order: i })),

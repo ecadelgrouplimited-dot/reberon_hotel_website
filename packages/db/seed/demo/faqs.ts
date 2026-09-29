@@ -1,5 +1,5 @@
 import { rt } from '@reberon/contracts';
-import { prisma, en, log } from '../lib.js';
+import { prisma, en, log, REFRESH } from '../lib.js';
 
 const GROUPS: { key: string; title: string; items: [string, string][] }[] = [
   {
@@ -46,6 +46,10 @@ export async function seedFaqs() {
     const existing = await prisma.faqGroup.findUnique({ where: { key: g.key } });
     if (existing) {
       ids[g.key] = existing.id;
+      if (REFRESH && existing.isSeed) {
+        await prisma.faqItem.deleteMany({ where: { groupId: existing.id, isSeed: true } });
+        await prisma.faqItem.createMany({ data: g.items.map(([q, a], order) => ({ groupId: existing.id, question: en(q), answer: rt.md(a), order, isSeed: true })) });
+      }
       continue;
     }
     const group = await prisma.faqGroup.create({

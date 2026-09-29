@@ -1,0 +1,13 @@
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'Reberon Hotel, Kapchorwa',
+    short_name: 'Reberon',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#f4f5f1',
+    theme_color: '#2f4a3a',
+    icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' }],
+  };
+}

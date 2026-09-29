@@ -1,6 +1,6 @@
 import { rt, zBlocks, type Cta } from '@reberon/contracts';
 import type { PageKind } from '../../src/index.js';
-import { prisma, en, log, seedImage, bid } from '../lib.js';
+import { prisma, en, log, seedImage, bid, REFRESH } from '../lib.js';
 
 type B = { id: string; type: string; variant?: string; tone?: string; anchor?: string; data: Record<string, unknown> };
 const block = (type: string, data: Record<string, unknown>, extra: Partial<B> = {}): B => ({ id: bid(type), type, data, ...extra });
@@ -20,8 +20,15 @@ async function upsertPublishedPage(slug: string, kind: PageKind, title: string, 
     console.error(JSON.stringify(parsed.error.issues.slice(0, 5), null, 2));
     throw new Error(`Seed page "${slug}" has invalid blocks`);
   }
-  if (await prisma.page.findUnique({ where: { slug } })) return;
   const seoJson = { ...(seo.title ? { title: en(seo.title) } : {}), ...(seo.description ? { description: en(seo.description) } : {}) };
+  const existing = await prisma.page.findUnique({ where: { slug } });
+  if (existing) {
+    if (!REFRESH || !existing.isSeed) return;
+    const last = await prisma.pageVersion.findFirst({ where: { pageId: existing.id }, orderBy: { version: 'desc' } });
+    const v = await prisma.pageVersion.create({ data: { pageId: existing.id, version: (last?.version ?? 0) + 1, title: en(title), blocks: blocks as object[], seo: seoJson, publishedById } });
+    await prisma.page.update({ where: { id: existing.id }, data: { title: en(title), draftBlocks: blocks as object[], draftSeo: seoJson, draftVersion: { increment: 1 }, publishedVersionId: v.id, status: 'PUBLISHED' } });
+    return;
+  }
   const page = await prisma.page.create({
     data: { slug, kind, title: en(title), draftBlocks: blocks as object[], draftSeo: seoJson, status: 'PUBLISHED', isSeed: true, updatedById: publishedById },
   });

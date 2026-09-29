@@ -13,6 +13,9 @@ export const storage = createStorage();
 
 export const en = (s: string) => ({ en: s });
 
+/** `--refresh` rewrites demo rows (isSeed) from the seed source; real content is never touched. */
+export const REFRESH = process.argv.includes('--refresh');
+
 let counter = 0;
 /** Stable-ish block ids for seeded pages. */
 export const bid = (prefix: string) => `${prefix}-${(++counter).toString(36)}`;

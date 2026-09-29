@@ -1,6 +1,6 @@
 import { rt } from '@reberon/contracts';
 import type { DestinationKind } from '../../src/index.js';
-import { prisma, en, log, seedImage, bid } from '../lib.js';
+import { prisma, en, log, seedImage, bid, REFRESH } from '../lib.js';
 import type { Scene } from '../media/art.js';
 
 interface Stop { name: string; minutes: number | null; altitude: number; note: string; lat: number; lng: number }
@@ -187,6 +187,11 @@ export async function seedDestinations() {
     const existing = await prisma.destination.findUnique({ where: { slug: d.slug } });
     if (existing) {
       ids[d.slug] = existing.id;
+      if (REFRESH && existing.isSeed) {
+        await prisma.destination.update({ where: { id: existing.id }, data: { name: en(d.name), tagline: en(d.tagline), body: rt.md(d.body), blocks: (d.blocks?.(gallery) ?? []) as object[], heroMediaId: hero, galleryIds: gallery } });
+        await prisma.routeStop.deleteMany({ where: { destinationId: existing.id } });
+        if (d.stops) await prisma.routeStop.createMany({ data: d.stops.map((s, i) => ({ destinationId: existing.id, order: i, name: en(s.name), note: en(s.note), minutesFromPrev: s.minutes, altitude: s.altitude, lat: s.lat, lng: s.lng })) });
+      }
       continue;
     }
     const rec = await prisma.destination.create({

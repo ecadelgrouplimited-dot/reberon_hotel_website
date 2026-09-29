@@ -96,10 +96,10 @@ App shell with collapsible sidebar, command palette (⌘K: jump to any page/room
 
 | Item | Budget |
 |---|---|
-| JS (compressed, first load) | ≤ 110 KB for content pages |
+| JS (compressed, first load) | ≤ 170 KB total, of which app code ≤ 30 KB (React 19 + Next 16 runtime is ~150 KB; measured 160 KB) |
 | CSS | ≤ 30 KB |
 | Hero image | ≤ 120 KB AVIF at 768w; `fetchpriority=high`; blurhash placeholder inline |
-| Fonts | ≤ 2 files preloaded (Fraunces subset + Inter) |
+| Fonts | ≤ 2 files preloaded, Latin subset only (Fraunces opsz+SOFT, Inter): measured 166 KB, cached after first visit |
 | LCP / CLS / INP (p75, 4G mid Android) | ≤ 2.0 s / ≤ 0.05 / ≤ 200 ms |
 | Third-party | None blocking. Map, video, tours load on interaction/visibility |
 

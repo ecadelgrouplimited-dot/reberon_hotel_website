@@ -1,6 +1,6 @@
 import { rt } from '@reberon/contracts';
 import type { FacilityStatus } from '../../src/index.js';
-import { prisma, en, log, seedImage } from '../lib.js';
+import { prisma, en, log, seedImage, REFRESH } from '../lib.js';
 import type { Scene } from '../media/art.js';
 
 const FACILITIES: { slug: string; name: string; summary: string; body: string; icon: string; status: FacilityStatus; scene: Scene }[] = [
@@ -67,11 +67,9 @@ export async function seedFacilities() {
       await seedImage({ key: `facility-${f.slug}-1`, scene: f.scene, label: f.name, alt: f.name, folder: 'Facilities' }),
       await seedImage({ key: `facility-${f.slug}-2`, scene: f.scene, mood: 'mist', label: `${f.name} — detail`, alt: `${f.name}, detail`, folder: 'Facilities' }),
     ];
-    const rec = await prisma.facility.upsert({
-      where: { slug: f.slug },
-      create: { slug: f.slug, name: en(f.name), summary: en(f.summary), body: rt.md(f.body), icon: f.icon, status: f.status, mediaIds: media, order, isSeed: true },
-      update: {},
-    });
+    const data = { name: en(f.name), summary: en(f.summary), body: rt.md(f.body), icon: f.icon, status: f.status, mediaIds: media, order, isSeed: true };
+    const existing = await prisma.facility.findUnique({ where: { slug: f.slug }, select: { isSeed: true } });
+    const rec = await prisma.facility.upsert({ where: { slug: f.slug }, create: { slug: f.slug, ...data }, update: REFRESH && existing?.isSeed ? data : {} });
     ids[f.slug] = rec.id;
   }
   log('facilities', `${FACILITIES.length}`);

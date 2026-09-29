@@ -1,4 +1,4 @@
-import type { RichDoc, RichNode, LRich } from './localized.js';
+import type { RichDoc, RichNode, LRich } from './text.js';
 
 /**
  * Tiny builder for rich-text documents (used by seed data and tests).
@@ -39,7 +39,9 @@ export const rt = {
       if (bullets.length) blocks.push(rt.ul(...bullets));
       bullets = [];
     };
-    for (const raw of source.trim().split(/\n\s*\n|\n(?=- |## |### |> )/)) {
+    // Headings always stand alone, even without blank lines around them.
+    const normalised = source.trim().replace(/^(#{2,3} .*)$/gm, '\n$1\n');
+    for (const raw of normalised.split(/\n\s*\n|\n(?=- |## |### |> )/)) {
       const line = raw.trim().replace(/\s*\n\s*/g, ' ');
       if (!line) continue;
       if (line.startsWith('- ')) {

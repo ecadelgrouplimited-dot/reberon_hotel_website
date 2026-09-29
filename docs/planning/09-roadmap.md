@@ -6,6 +6,16 @@ Phases map to the spec's Movements. Each phase ends with a demo on staging and t
 
 - **Phase 0:** done. MinIO is deferred (ADR-015), and CI is still to wire up (0.10).
 - **Phase 1:** done except 1.15 (production deploy). That waits on the domain and hosting decisions (Q2, Q9).
+- **Phase 2 (Movement II):** built and verified. Switched off until rates are confirmed and Pesapal keys exist (Q10):
+  - rates and availability, holds, reservations and folio, Pesapal plus a test provider
+  - confirmations, guest stay page, House screens, owner brief
+
+  Verified:
+  - 5 concurrent bookings for the last room: exactly 1 wins
+  - a duplicate payment notification counts once
+  - holds expire and release rooms
+  - cancellation refunds follow the policy
+  - the full website booking journey works in Chrome
 
 Verified end to end in a real browser:
 - publish → live on the website in under 1 second

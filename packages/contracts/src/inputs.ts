@@ -82,12 +82,33 @@ export const zInviteInput = z.object({
   role: z.enum(ROLES),
 });
 export const zAcceptInviteInput = z.object({ token: z.string().min(20), password: zPasswordSchema });
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM');
 export const zUserUpdateInput = z.object({
   name: z.string().trim().min(2).max(120).optional(),
+  email: z.string().trim().toLowerCase().email().nullable().optional().or(z.literal('').transform(() => null)),
   phone: z.string().trim().max(40).nullable().optional(),
+  jobTitle: z.string().trim().max(80).nullable().optional(),
   role: z.enum(ROLES).optional(),
   status: z.enum(['ACTIVE', 'DISABLED']).optional(),
+  canSignIn: z.boolean().optional(),
+  signInFrom: hhmm.nullable().optional(),
+  signInUntil: hhmm.nullable().optional(),
+  accessExpiresAt: z.string().datetime({ offset: true }).nullable().optional(),
+  grants: z.array(z.string().max(40)).max(60).optional(),
+  revokes: z.array(z.string().max(40)).max(60).optional(),
 });
+
+/** A person on the staff list. They sign in only if canSignIn (then an email is needed for the invitation). */
+export const zStaffCreateInput = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    jobTitle: z.string().trim().max(80).optional(),
+    phone: z.string().trim().max(40).optional(),
+    email: z.string().trim().toLowerCase().email().optional().or(z.literal('').transform(() => undefined)),
+    role: z.enum(ROLES),
+    canSignIn: z.boolean().default(true),
+  })
+  .refine((v) => !v.canSignIn || !!v.email, { path: ['email'], message: 'An email is needed to send the invitation' });
 
 /* ---------- Content ---------- */
 

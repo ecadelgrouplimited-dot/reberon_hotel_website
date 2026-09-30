@@ -69,5 +69,7 @@ A manager edits a page in the House. The draft autosaves, and the preview beside
 - **Movement IV (the House):** built and verified: front desk, room rack, housekeeping, guests and memory, feedback, reports. Sign in as `desk@`, `housekeeping@` or the owner to see each view.
 - **Movement III (the Walk):** built, switched off (`features.toursEnabled`). Image walks for every room and the hall are seeded; a camera walk added later replaces them in place.
 - **Integrations and messaging:** Pesapal, SMS, WhatsApp and SMTP keys are entered in House → Integrations (encrypted); message wording in House → Messages. Until a channel is connected, messages are kept in Sent messages for staff to send by hand.
+- **People and access:** per-person permissions on top of a role, staff without a login, sign-in hours and end dates, sign out everywhere (Admin → People and access).
+- **Receipts and invoices:** numbered receipt for every payment, refund notes, invoice at check-out; print A4 or 80 mm, send by email/SMS/WhatsApp, void and reissue, register with CSV, public check at `/verify`.
 - **Deployment:** ready. Needs a domain and a server. See [`docs/planning/13-deployment.md`](docs/planning/13-deployment.md) for the first deploy and the go-live checklist.
 - **Still to settle:** open questions for Denis and Wilson (domain, logo, real phone numbers, room mix, prices) are listed in [`docs/planning/12-decisions-log.md`](docs/planning/12-decisions-log.md). Until then the seed uses clearly marked placeholders, and every image is labelled as a drawing.

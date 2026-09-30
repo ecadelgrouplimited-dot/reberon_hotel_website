@@ -141,6 +141,8 @@ export interface GuestStayDTO {
   /** Movement IV: after (or during) the stay the guest may tell us how it was. */
   canGiveFeedback: boolean;
   feedback: { score: 'GOOD' | 'OK' | 'BAD'; comment: string | null; allowPublic: boolean } | null;
+  /** Receipts, refund notes and invoices the guest can open and print. */
+  documents: { kind: 'RECEIPT' | 'REFUND' | 'INVOICE'; number: string; amountMinor: string; issuedAt: string; url: string }[];
 }
 
 /* ───────── Admin ───────── */

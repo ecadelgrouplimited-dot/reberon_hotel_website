@@ -14,6 +14,8 @@ import { Skeleton } from '@/components/ui/bits';
 import { Dialog } from '@/components/ui/dialog';
 import { Switch, TextArea, TextInput } from '@/components/ui/field';
 import { HkBadge } from './hk';
+import { printDocument } from '@/components/documents/documents-panel';
+import type { DocumentRegisterDTO } from '@reberon/contracts';
 
 /** The minimum a desk dialog needs to know about a stay. */
 export interface StayRef {
@@ -72,6 +74,16 @@ function PaymentFields({ on, setOn, amount, setAmount, method, setMethod, refere
       )}
     </div>
   );
+}
+
+/** The newest valid document of a kind for this booking (to offer "print" right away). */
+async function latest(reservationId: string, kind: 'RECEIPT' | 'INVOICE') {
+  try {
+    const r = await get<DocumentRegisterDTO>(`/documents?reservationId=${reservationId}&kind=${kind}`);
+    return r.data.find((d) => !d.voided) ?? null;
+  } catch {
+    return null; // someone without receipt access still checked the guest in
+  }
 }
 
 /* ───────── Room picking ───────── */
@@ -161,8 +173,9 @@ export function CheckInDialog({ stay, open, onClose, onDone }: { stay: StayRef |
       if (payment && !payment.amount) throw new Error('Enter the amount taken');
       return post(`/desk/reservations/${stay!.id}/check-in`, { assignments, allowDirty, payment, idDocType: doc.idDocNumber ? doc.idDocType : undefined, idDocNumber: doc.idDocNumber || undefined, nationality: doc.nationality || undefined });
     },
-    onSuccess: () => {
-      toast.success(`${stay!.guest.name.split(' ')[0]} is in. Welcome to Reberon.`);
+    onSuccess: async () => {
+      const receipt = pay && balance > 0n ? await latest(stay!.id, 'RECEIPT') : null;
+      toast.success(`${stay!.guest.name.split(' ')[0]} is in. Welcome to Reberon.`, receipt ? { description: `Receipt ${receipt.number}`, duration: 12000, action: { label: 'Print receipt', onClick: () => printDocument(receipt.id) } } : undefined);
       onDone();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -245,8 +258,9 @@ export function CheckOutDialog({ stay, open, onClose, onDone }: { stay: StayRef 
       if (payment && !payment.amount) throw new Error('Enter the amount taken');
       return post(`/desk/reservations/${stay!.id}/check-out`, { payment, writeOffReason: writeOff ? reason : undefined, feedback: score ? { score, comment: comment || undefined } : undefined });
     },
-    onSuccess: () => {
-      toast.success(`${stay!.guest.name.split(' ')[0]} has checked out. The room is on the cleaning list.`);
+    onSuccess: async () => {
+      const invoice = await latest(stay!.id, 'INVOICE');
+      toast.success(`${stay!.guest.name.split(' ')[0]} has checked out. The room is on the cleaning list.`, invoice ? { description: `Invoice ${invoice.number}`, duration: 15000, action: { label: 'Print invoice', onClick: () => printDocument(invoice.id) } } : undefined);
       onDone();
     },
     onError: (e) => toast.error(errMsg(e)),

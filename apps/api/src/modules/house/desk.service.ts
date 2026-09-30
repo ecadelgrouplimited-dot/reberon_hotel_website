@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { z } from 'zod';
 import type { DeskBoardDTO, DeskStayDTO, zAssignRoomsInput, zCheckInInput, zCheckOutInput, zFolioChargeInput, zMoveRoomInput } from '@reberon/contracts';
-import { can } from '@reberon/contracts';
 import { hotelToday } from '@reberon/utils';
 import type { Prisma } from '@reberon/db';
 import { PrismaService } from '../../common/prisma.service.js';
 import { AuditService } from '../../common/audit.service.js';
-import type { AuthUser } from '../../common/auth.js';
+import { has, type AuthUser } from '../../common/auth.js';
 import { badRequest, conflict, forbidden, notFound } from '../../common/errors.js';
 import { last4, seal } from '../../common/crypto.js';
 import { env } from '../../config.js';
 import { MessagingService } from '../notifications/messaging.service.js';
+import { DocumentsService } from '../documents/documents.service.js';
 import { BookingService } from '../booking/booking.service.js';
 import { InventoryService, day, iso, nightsOf, type Tx } from '../booking/inventory.service.js';
 import { RackService } from './rack.service.js';
@@ -26,6 +26,8 @@ const isExclusion = (e: unknown) => String((e as Error)?.message ?? e).includes(
  */
 @Injectable()
 export class DeskService {
+  private readonly log = new Logger('Desk');
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -33,6 +35,7 @@ export class DeskService {
     private readonly booking: BookingService,
     private readonly rack: RackService,
     private readonly messaging: MessagingService,
+    private readonly documents: DocumentsService,
   ) {}
 
   /* ───────── board ───────── */
@@ -170,7 +173,7 @@ export class DeskService {
     if (iso(pre.arrival) > today) throw badRequest(`This guest arrives on ${iso(pre.arrival)}`);
     if (iso(pre.departure) <= today) throw badRequest('The stay has already ended. Mark it a no-show or change the dates.');
     if (body.payment) {
-      if (!can(actor.role, 'payments:record')) throw forbidden('You cannot take payments');
+      if (!has(actor, 'payments:record')) throw forbidden('You cannot take payments');
       await this.booking.recordPayment(id, body.payment, actor);
     }
     const numbers = await this.prisma.$transaction(async (tx) => {
@@ -204,9 +207,9 @@ export class DeskService {
     const pre = await this.prisma.reservation.findUnique({ where: { id } });
     if (!pre) throw notFound('Reservation');
     if (pre.status !== 'IN_HOUSE') throw badRequest('Only a guest who is in the house can check out');
-    if (body.writeOffReason && !can(actor.role, 'payments:refund')) throw forbidden('Only the owner or a manager can close a bill with money owed');
+    if (body.writeOffReason && !has(actor, 'payments:refund')) throw forbidden('Only the owner or a manager can close a bill with money owed');
     if (body.payment) {
-      if (!can(actor.role, 'payments:record')) throw forbidden('You cannot take payments');
+      if (!has(actor, 'payments:record')) throw forbidden('You cannot take payments');
       await this.booking.recordPayment(id, body.payment, actor);
     }
     const out = await this.prisma.$transaction(async (tx) => {
@@ -235,6 +238,8 @@ export class DeskService {
       await this.booking.change(tx, id, 'checked_out', `Checked out${early ? ` early (was due ${iso(r.departure)})` : ''}${balance > 0n ? ` — ${this.booking.money(balance, r.currency)} written off` : ''}`, actor.id);
       return { r, early };
     });
+    // The numbered final bill, ready to print at the desk.
+    await this.documents.invoice(id, actor).catch((e) => this.log.error(`invoice for ${pre.code}: ${(e as Error).message}`));
     await this.audit.record({ actor, action: 'desk.check_out', entityType: 'Reservation', entityId: id, summary: `Checked out ${pre.code}${out.early ? ' (early)' : ''}` });
     if (!body.feedback) await this.messaging.forReservation('stay.thank_you', id).catch(() => undefined);
     return this.booking.detail(id);
@@ -301,7 +306,7 @@ export class DeskService {
   /* ───────── folio ───────── */
 
   async charge(id: string, body: z.infer<typeof zFolioChargeInput>, actor: AuthUser) {
-    if (body.credit && !can(actor.role, 'payments:refund')) throw forbidden('Only the owner or a manager can take money off a bill');
+    if (body.credit && !has(actor, 'payments:refund')) throw forbidden('Only the owner or a manager can take money off a bill');
     const amount = body.credit ? -body.amount : body.amount;
     const r = await this.prisma.$transaction(async (tx) => {
       const r = await this.lock(tx, id);

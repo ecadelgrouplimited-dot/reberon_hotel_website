@@ -15,6 +15,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { SelectInput, Switch, TextArea, TextInput } from '@/components/ui/field';
 import { StayPanel, type StayDetail } from '@/components/house/stay-panel';
 import { ReservationMessages } from '@/components/messages/reservation-messages';
+import { DocumentsPanel } from '@/components/documents/documents-panel';
 
 type Detail = {
   id: string; code: string; status: string; source: string; currency: string; arrival: string; departure: string; nights: number; adults: number; children: number;
@@ -136,6 +137,8 @@ export default function ReservationPage({ params }: { params: Promise<{ id: stri
               </ul>
             )}
           </Section>
+
+          <DocumentsPanel reservationId={r.id} status={r.status} onChanged={() => refresh()} />
 
           <ReservationMessages reservationId={r.id} hasEmail={!!r.contact.email} hasPhone={!!r.contact.phone} />
 

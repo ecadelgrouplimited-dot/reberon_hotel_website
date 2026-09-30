@@ -2,12 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import type { z } from 'zod';
 import type { HkBoardDTO, HkStatus, HkTaskDTO, HkTaskStatus, RackRoomDTO, zHkTaskPatch, zRoomBlockInput } from '@reberon/contracts';
-import { can, HK_TASK_STATUSES } from '@reberon/contracts';
+import { HK_TASK_STATUSES } from '@reberon/contracts';
 import { hotelToday } from '@reberon/utils';
 import type { Prisma } from '@reberon/db';
 import { PrismaService } from '../../common/prisma.service.js';
 import { AuditService } from '../../common/audit.service.js';
-import type { AuthUser } from '../../common/auth.js';
+import { has, type AuthUser } from '../../common/auth.js';
 import { badRequest, conflict, forbidden, notFound } from '../../common/errors.js';
 import { BookingService } from '../booking/booking.service.js';
 import { InventoryService, day, iso, nightsOf, type Tx } from '../booking/inventory.service.js';
@@ -186,7 +186,7 @@ export class RackService {
   async patchTask(id: string, body: z.infer<typeof zHkTaskPatch>, actor: AuthUser) {
     const task = await this.prisma.housekeepingTask.findUnique({ where: { id }, include: { room: true } });
     if (!task) throw notFound('Task');
-    const supervisor = can(actor.role, 'rooms:inspect');
+    const supervisor = has(actor, 'rooms:inspect');
     if (body.assigneeId !== undefined && !supervisor && body.assigneeId !== actor.id && body.assigneeId !== null) throw forbidden('Only a supervisor can give a room to someone else');
     if (body.status === 'INSPECTED' && !supervisor) throw forbidden('A supervisor inspects the room');
     if (body.status === 'INSPECTED' && task.status !== 'DONE' && task.status !== 'INSPECTED') throw badRequest('Clean the room before inspecting it');
@@ -234,7 +234,7 @@ export class RackService {
     if (!['VACANT_CLEAN', 'VACANT_DIRTY', 'INSPECTED'].includes(status)) throw badRequest('Occupied comes from check-in; blocked and out of order come from a room block.');
     if (OUT_OF_SERVICE.includes(room.hkStatus)) throw badRequest(`Room ${room.number} is ${room.hkStatus === 'BLOCKED' ? 'blocked' : 'out of order'}. Release the block first.`);
     if (room.hkStatus === 'OCCUPIED') throw badRequest(`Room ${room.number} has a guest in it.`);
-    if (status === 'INSPECTED' && !can(actor.role, 'rooms:inspect')) throw forbidden('A supervisor inspects the room');
+    if (status === 'INSPECTED' && !has(actor, 'rooms:inspect')) throw forbidden('A supervisor inspects the room');
     const today = hotelToday();
     await this.prisma.$transaction(async (tx) => {
       await tx.room.update({ where: { id: roomId }, data: { hkStatus: status, ...(note ? { notes: note } : {}) } });

@@ -23,6 +23,18 @@ export async function seedUsers() {
     });
     ids[u.email] = user.id;
   }
-  log('users', `${SEED_USERS.length} (password from SEED_PASSWORD)`);
+  // Staff who never sign in: named on cleaning rotas and documents, no House login.
+  const records = [
+    { name: 'Esther Chebet', jobTitle: 'Housekeeper', role: 'HOUSEKEEPING' as Role, phone: '+256700000111' },
+    { name: 'Moses Kiprotich', jobTitle: 'Night guard', role: 'HOUSEKEEPING' as Role, phone: '+256700000112' },
+  ];
+  for (const r of records) {
+    if (!(await prisma.user.findFirst({ where: { name: r.name, isSeed: true } }))) await prisma.user.create({ data: { ...r, canSignIn: false, status: 'ACTIVE', isSeed: true } });
+  }
+  // A temporary contractor: desk access for three months, weekday hours.
+  if (!(await prisma.user.findUnique({ where: { email: 'relief.desk@reberonhotel.ug' } }))) {
+    await prisma.user.create({ data: { email: 'relief.desk@reberonhotel.ug', name: 'Joan Nekesa', jobTitle: 'Relief receptionist', role: 'DESK', status: 'ACTIVE', passwordHash, isSeed: true, signInFrom: '07:00', signInUntil: '19:00', accessExpiresAt: new Date(Date.now() + 90 * 86_400_000), revokes: ['payments:record'] } });
+  }
+  log('users', `${SEED_USERS.length} who sign in, 2 staff records without sign-in, 1 relief receptionist (password from SEED_PASSWORD)`);
   return ids;
 }

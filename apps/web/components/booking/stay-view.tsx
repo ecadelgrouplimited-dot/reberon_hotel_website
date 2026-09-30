@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { CalendarCheck, Clock, Frown, LoaderCircle, Meh, MessageSquare, Printer, Smile } from 'lucide-react';
+import { CalendarCheck, Clock, FileText, Frown, LoaderCircle, Meh, MessageSquare, Printer, Smile } from 'lucide-react';
 import type { GuestStayDTO } from '@reberon/contracts';
 import { t } from '@reberon/contracts/text';
 import { formatMoney, whatsappLink, type Currency } from '@reberon/utils';
@@ -10,6 +10,7 @@ import { useSite } from '@/components/site/site-provider';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const money = (m: string, c: string) => formatMoney(BigInt(m), c as Currency).replace(/\.00$/, '');
+const DOC = { RECEIPT: 'Receipt', REFUND: 'Refund note', INVOICE: 'Invoice' } as const;
 const fmt = (s: string) => new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${s}T12:00:00Z`));
 
 export function StayView({ code, token, waitForPayment }: { code: string; token: string; waitForPayment?: boolean }) {
@@ -111,6 +112,23 @@ export function StayView({ code, token, waitForPayment }: { code: string; token:
             <button type="button" className="btn mt-5 w-full" disabled={paying} onClick={pay}>{paying && <LoaderCircle className="size-4 animate-spin" />}<span className="btn-label">{s.status === 'HELD' ? 'Pay the deposit' : `Pay ${money(s.balanceMinor, s.currency)} now`}</span></button>
           )}
         </div>
+        {s.documents.length > 0 && (
+          <div className="rounded-[var(--r-lg)] border border-line bg-surface p-5">
+            <p className="text-sm font-semibold">Receipts and invoices</p>
+            <ul className="mt-3 grid gap-1">
+              {s.documents.map((d) => (
+                <li key={d.number}>
+                  <a href={d.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-[var(--r-md)] px-2 py-2 text-sm hover:bg-surface-2">
+                    <FileText className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+                    <span className="flex-1"><span className="block font-medium">{DOC[d.kind]}</span><span className="font-mono text-xs text-fg-muted">{d.number}</span></span>
+                    <span className="tabular">{d.kind === 'REFUND' ? '−' : ''}{money(d.amountMinor, s.currency)}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-fg-subtle">Opens a page you can print or save as a PDF.</p>
+          </div>
+        )}
         <button type="button" className="btn btn-secondary w-full" onClick={() => openEnquiry({ intent: 'STAY' })}><MessageSquare className="size-4" /> Ask for something</button>
         {site.contact.whatsapp && <a className="btn btn-secondary w-full" href={whatsappLink(site.contact.whatsapp, `Hello, this is ${s.guestName} about booking ${s.code}.`)} target="_blank" rel="noreferrer">WhatsApp the desk</a>}
         <button type="button" className="btn btn-ghost justify-self-center" onClick={() => window.print()}><Printer className="size-4" /> <span className="btn-label">Print</span></button>

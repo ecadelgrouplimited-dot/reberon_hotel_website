@@ -10,6 +10,7 @@ async function main() {
     prisma.paymentIntent.deleteMany({ where: { reservationId: { in: demoRes.map((r) => r.id) } } }),
     prisma.reservation.deleteMany({ where: { isSeed: true } }),
     prisma.housekeepingTask.deleteMany({ where: { isSeed: true } }),
+    prisma.issuedDocument.deleteMany({ where: { isSeed: true } }),
     prisma.tour.deleteMany({ where: { isSeed: true } }),
     prisma.roomBlock.deleteMany({ where: { room: { isSeed: true } } }),
     prisma.inventoryDay.deleteMany({}),
@@ -32,6 +33,8 @@ async function main() {
     prisma.testimonial.deleteMany({ where: { isSeed: true } }),
     prisma.mediaAsset.deleteMany({ where: { isSeed: true } }),
   ]);
+  // Numbering starts again at 1 when no documents are left (a clean start for launch).
+  if (!(await prisma.issuedDocument.count())) await prisma.documentSequence.deleteMany({});
   for (const m of media) await storage.remove(mediaKeys.variant(m.id, 0).replace(/\/0\.webp$/, ''));
   console.log('Purged demo rows:', counts.map((c) => c.count).reduce((a, b) => a + b, 0), `(and ${media.length} media folders)`);
   console.log('Seed users are kept so you can still sign in; disable them in Settings → Users.');

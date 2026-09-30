@@ -16,6 +16,7 @@ import type { AuthUser } from '../../common/auth.js';
 import { env } from '../../config.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { MessagingService } from '../notifications/messaging.service.js';
+import { DocumentsService } from '../documents/documents.service.js';
 import { lt, toMediaRef } from '../content/mappers.js';
 import { InventoryService, InventoryUnavailable, day, iso, nightsOf, type Tx } from './inventory.service.js';
 import { PricingService, extraTotal, roundDeposit, type PolicyRule } from './pricing.service.js';
@@ -52,6 +53,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
     private readonly payments: PaymentsService,
     private readonly notifications: NotificationsService,
     private readonly messaging: MessagingService,
+    private readonly documents: DocumentsService,
   ) {}
 
   onModuleInit() {
@@ -302,6 +304,8 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
       return { already: false, reservationId: r.id, confirmedNow, stranded };
     });
     if (!result.already) {
+      // Every payment gets a numbered receipt; a guest who paid online also gets it by email.
+      await this.documents.forPayment(intentId, actor ?? null, { send: !actor }).catch((e) => this.log.error(`receipt for ${intentId}: ${(e as Error).message}`));
       await this.audit.record({ actor: actor ?? null, actorType: actor ? 'USER' : 'WEBHOOK', action: 'payment.succeeded', entityType: 'Reservation', entityId: result.reservationId, summary: `Payment received${result.confirmedNow ? '; booking confirmed' : ''}` });
       await this.notifyAfterPayment(result.reservationId, result.confirmedNow, result.stranded);
     }
@@ -413,14 +417,16 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
   }
 
   async recordRefund(id: string, p: { amount: bigint; method: 'MOBILE_MONEY' | 'CARD' | 'CASH' | 'BANK' | 'UNKNOWN'; reference?: string; note?: string }, actor: AuthUser) {
-    await this.prisma.$transaction(async (tx) => {
+    const lineId = await this.prisma.$transaction(async (tx) => {
       const r = await tx.reservation.findUnique({ where: { id }, include: { folio: true } });
       if (!r) throw notFound('Reservation');
       if (p.amount > r.paidMinor) throw badRequest('That is more than was paid.');
-      await tx.folioLine.create({ data: { folioId: r.folio!.id, kind: 'REFUND', description: `Refund — ${p.method.toLowerCase().replace('_', ' ')}${p.reference ? ` (${p.reference})` : ''}${p.note ? ` · ${p.note}` : ''}`, date: day(hotelToday()), amountMinor: p.amount, postedById: actor.id } });
+      const line = await tx.folioLine.create({ data: { folioId: r.folio!.id, kind: 'REFUND', description: `Refund — ${p.method.toLowerCase().replace('_', ' ')}${p.reference ? ` (${p.reference})` : ''}${p.note ? ` · ${p.note}` : ''}`, date: day(hotelToday()), amountMinor: p.amount, postedById: actor.id } });
       await tx.reservation.update({ where: { id }, data: { paidMinor: { decrement: p.amount }, version: { increment: 1 } } });
       await this.change(tx, id, 'refund', `Refunded ${this.money(p.amount, r.currency)}`, actor.id);
+      return line.id;
     });
+    await this.documents.forRefund(lineId, actor).catch((e) => this.log.error(`refund note: ${(e as Error).message}`));
     await this.audit.record({ actor, action: 'payment.refund', entityType: 'Reservation', entityId: id, summary: `Recorded refund` });
     return this.detail(id);
   }
@@ -523,6 +529,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
       canPayBalance: (r.status === 'CONFIRMED' && balance > 0n) || (r.status === 'HELD' && !!r.holdExpiresAt && r.holdExpiresAt > new Date()),
       canGiveFeedback: r.status === 'IN_HOUSE' || (r.status === 'CHECKED_OUT' && !!r.checkedOutAt && Date.now() - r.checkedOutAt.getTime() < 60 * 86_400_000),
       feedback: r.feedback ? { score: r.feedback.score, comment: r.feedback.comment, allowPublic: r.feedback.allowPublic } : null,
+      documents: ['CONFIRMED', 'IN_HOUSE', 'CHECKED_OUT', 'CANCELLED', 'NO_SHOW'].includes(r.status) ? await this.documents.forGuest(r.id, r.code) : [],
     };
   }
 
@@ -580,7 +587,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
   @Cron('0 19 * * *', { timeZone: 'Africa/Kampala' })
   async sendOwnerBrief() {
     const brief = await this.ownerBrief();
-    const owners = await this.prisma.user.findMany({ where: { role: 'OWNER', status: 'ACTIVE', deletedAt: null } });
+    const owners = (await this.prisma.user.findMany({ where: { role: 'OWNER', status: 'ACTIVE', deletedAt: null, email: { not: null } } })) as { email: string; name: string }[];
     const ugx = this.money(BigInt(brief.clearedToday.UGX), 'UGX');
     const usd = BigInt(brief.clearedToday.USD) > 0n ? ` + ${this.money(BigInt(brief.clearedToday.USD), 'USD')}` : '';
     for (const o of owners) {

@@ -9,3 +9,4 @@ export * from './booking.js';
 export * from './house.js';
 export * from './messaging.js';
 export * from './tours.js';
+export * from './documents.js';

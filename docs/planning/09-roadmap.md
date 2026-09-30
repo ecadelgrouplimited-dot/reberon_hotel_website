@@ -33,6 +33,7 @@ Phases map to the spec's Movements. Each phase ends with a demo on staging and t
   - a published live tour replaces the pre-opening one in the same slot, with no page edits
   - hotspots as labelled facts; anonymous analytics down to "walked, then booked and paid"
 - **Integrations and messaging (M22 vault, M09, M10):** built and verified. Encrypted keys for Pesapal, Africa's Talking, WhatsApp Cloud API and SMTP; editable templates; an outbox that records unconnected channels instead of failing
+- **People and access (M22) and receipts (M08/M09):** built and verified. Per-person permissions, staff without a login, hours and end dates; gap-free numbered receipts, refund notes and invoices with print, send, void and verify
 - **Deployment:** Docker images, production compose file with Caddy, deploy and backup scripts, and CI. Verified from a clean checkout and by running the images. Waits only on the domain and the server (Q2, Q9). See [13-deployment.md](13-deployment.md)
 
 Verified end to end in a real browser:

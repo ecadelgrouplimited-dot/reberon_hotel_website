@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Patch, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { can, zSettingsPatch } from '@reberon/contracts';
+import { zSettingsPatch } from '@reberon/contracts';
 import type { z } from 'zod';
 import { PrismaService } from '../../common/prisma.service.js';
 import { AuditService } from '../../common/audit.service.js';
-import { CurrentUser, Requires, type AuthUser } from '../../common/auth.js';
+import { CurrentUser, has, Requires, type AuthUser } from '../../common/auth.js';
 import { ZodPipe } from '../../common/zod.pipe.js';
 import { badRequest, forbidden } from '../../common/errors.js';
 import { Events } from '../../common/events.js';
@@ -38,7 +38,7 @@ export class SettingsAdminController {
       const row = known.get(key);
       if (!row) throw badRequest(`Unknown setting "${key}"`);
       if (LOCKED.has(key)) throw badRequest(`"${key}" cannot be changed`);
-      if (row.group === 'FEATURES' && !can(user.role, 'settings:features')) throw forbidden('Only the owner can change features');
+      if (row.group === 'FEATURES' && !has(user, 'settings:features')) throw forbidden('Only the owner can change features');
     }
     if (typeof body['contact.whatsapp'] === 'string' && body['contact.whatsapp']) {
       const n = normalizePhone(body['contact.whatsapp']);

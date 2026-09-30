@@ -1,7 +1,7 @@
 import type { Permission } from '@reberon/contracts';
 import {
   BedDouble, BookOpenText, CalendarRange, CircleHelp, ConciergeBell, FileText, Hammer, Home, Image, Inbox, ListChecks, Map, Navigation, ScrollText,
-  Settings, Shuffle, SprayCan, Building2, Users, Rocket, Gift, Sunset, LayoutGrid, Contact, MessageCircleHeart, ChartColumnBig, Send, PlugZap, MessagesSquare, Rotate3d, type LucideIcon,
+  Settings, Shuffle, SprayCan, Building2, Users, Rocket, Gift, Sunset, LayoutGrid, Contact, MessageCircleHeart, ChartColumnBig, Send, PlugZap, MessagesSquare, Rotate3d, ReceiptText, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -48,6 +48,7 @@ export const NAV: NavGroup[] = [
       { label: 'Reservations', href: '/reservations', icon: BookOpenText, perm: 'bookings:read' },
       { label: 'Calendar & rates', href: '/calendar', icon: CalendarRange, perm: 'rates:read' },
       { label: 'Extras & packages', href: '/sellables', icon: Gift, perm: 'rates:read' },
+      { label: 'Receipts', href: '/receipts', icon: ReceiptText, perm: 'receipts:read' },
       { label: 'Owner brief', href: '/brief', icon: Sunset, perm: 'bookings:read' },
     ],
   },
@@ -68,7 +69,7 @@ export const NAV: NavGroup[] = [
       { label: 'Settings', href: '/settings', icon: Settings, perm: 'settings:read' },
       { label: 'Messages', href: '/settings/messages', icon: MessagesSquare, perm: 'settings:read' },
       { label: 'Integrations', href: '/settings/integrations', icon: PlugZap, perm: 'vault:manage' },
-      { label: 'People', href: '/settings/users', icon: Users, perm: 'users:manage' },
+      { label: 'People and access', href: '/settings/users', icon: Users, perm: 'users:manage' },
       { label: 'Audit log', href: '/settings/audit', icon: ScrollText, perm: 'audit:read' },
     ],
   },

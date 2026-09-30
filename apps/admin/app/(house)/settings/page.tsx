@@ -41,6 +41,17 @@ const SECTIONS: { title: string; description: string; fields: AdminFieldDef[]; k
     fields: [{ kind: 'group', label: '', fields: [{ kind: 'text', name: 'hotel.checkInTime', label: 'Check-in from', placeholder: '14:00' }, { kind: 'text', name: 'hotel.checkOutTime', label: 'Check-out by', placeholder: '10:30' }] }],
   },
   {
+    title: 'Receipts and invoices',
+    description: 'What every receipt, refund note and invoice carries. Documents already issued keep what they said at the time.',
+    keys: ['hotel.legalName', 'receipts.tin', 'receipts.vatRegistered', 'receipts.footer', 'receipts.paper'],
+    fields: [
+      { kind: 'group', label: '', fields: [{ kind: 'text', name: 'hotel.legalName', label: 'Registered company name' }, { kind: 'text', name: 'receipts.tin', label: 'TIN', help: 'Printed on every document when set.' }] },
+      { kind: 'boolean', name: 'receipts.vatRegistered', label: 'VAT registered: show the VAT included on invoices' },
+      { kind: 'text', name: 'receipts.footer', label: 'Footer line' },
+      { kind: 'select', name: 'receipts.paper', label: 'Default paper for Print', options: [{ value: 'A4', label: 'A4 page' }, { value: '80MM', label: '80 mm receipt printer' }] },
+    ],
+  },
+  {
     title: 'Search & sharing defaults',
     description: 'Used when a page has not set its own.',
     keys: ['seo.defaultTitle', 'seo.titleTemplate', 'seo.defaultDescription', 'seo.shareImageId'],

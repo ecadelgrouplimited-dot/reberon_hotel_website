@@ -2,12 +2,13 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import argon2 from 'argon2';
 import type { Request, Response } from 'express';
-import { ROLE_PERMISSIONS, type MeDTO } from '@reberon/contracts';
+import type { MeDTO } from '@reberon/contracts';
 import type { User } from '@reberon/db';
 import { PrismaService } from '../../common/prisma.service.js';
 import { AuditService } from '../../common/audit.service.js';
 import { AppError, badRequest, unauthorized } from '../../common/errors.js';
-import { ACCESS_COOKIE, ACCESS_TTL_SECONDS, REFRESH_COOKIE, SESSION_HINT_COOKIE, signAccessToken } from '../../common/auth.js';
+import { ACCESS_COOKIE, ACCESS_TTL_SECONDS, REFRESH_COOKIE, SESSION_HINT_COOKIE, signAccessToken, type AuthUser } from '../../common/auth.js';
+import { accessProblem, permissionsOf } from '../../common/access.js';
 import { env } from '../../config.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { hashToken, newToken } from './tokens.js';
@@ -25,15 +26,19 @@ export class AuthService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  me(u: Pick<User, 'id' | 'email' | 'name' | 'role'> & { avatarId?: string | null }): MeDTO {
+  me(u: Pick<User, 'id' | 'email' | 'name' | 'role' | 'grants' | 'revokes'> & { avatarId?: string | null }): MeDTO {
     return {
       id: u.id,
-      email: u.email,
+      email: u.email ?? '',
       name: u.name,
       role: u.role,
       avatarUrl: u.avatarId ? `${env.MEDIA_PUBLIC_URL}/i/${u.avatarId}/320.webp` : null,
-      permissions: ROLE_PERMISSIONS[u.role],
+      permissions: permissionsOf(u),
     };
+  }
+
+  private asActor(u: User): AuthUser {
+    return { id: u.id, email: u.email ?? '', name: u.name, role: u.role, perms: permissionsOf(u) };
   }
 
   private cookieOpts(maxAgeMs: number, path = '/') {
@@ -45,7 +50,7 @@ export class AuthService {
     await this.prisma.session.create({
       data: { userId: user.id, refreshTokenHash: hashToken(refresh), family, userAgent: req.headers['user-agent']?.slice(0, 300), ip: req.ip, expiresAt: new Date(Date.now() + REFRESH_TTL_MS) },
     });
-    const access = await signAccessToken(user);
+    const access = await signAccessToken(this.asActor(user));
     res.cookie(ACCESS_COOKIE, access, this.cookieOpts(ACCESS_TTL_SECONDS * 1000));
     res.cookie(REFRESH_COOKIE, refresh, this.cookieOpts(REFRESH_TTL_MS, '/v1/admin/auth'));
     // Not a credential: only tells the admin app's router that a session probably exists.
@@ -75,10 +80,15 @@ export class AuthService {
       await this.audit.record({ actorType: 'USER', action: 'auth.login_failed', entityType: 'User', entityId: user.id, summary: `Failed sign-in (${failed})`, req });
       throw fail();
     }
-    if (user.status !== 'ACTIVE') throw unauthorized('Your account is not active. Ask the owner.');
+    // Right password, but maybe not allowed in: no login on their record, outside their hours, or access ended.
+    const problem = accessProblem(user);
+    if (problem) {
+      await this.audit.record({ actor: this.asActor(user), action: 'auth.login_refused', entityType: 'User', entityId: user.id, summary: problem, req });
+      throw unauthorized(problem);
+    }
     await this.prisma.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null, lastLoginAt: new Date() } });
     await this.issue(user, res, req);
-    await this.audit.record({ actor: user, action: 'auth.login', entityType: 'User', entityId: user.id, summary: 'Signed in', req });
+    await this.audit.record({ actor: this.asActor(user), action: 'auth.login', entityType: 'User', entityId: user.id, summary: 'Signed in', req });
     return this.me(user);
   }
 
@@ -93,9 +103,10 @@ export class AuthService {
       this.clear(res);
       throw unauthorized('Your session ended. Please sign in again.');
     }
-    if (session.expiresAt < new Date() || session.user.status !== 'ACTIVE' || session.user.deletedAt) {
+    const problem = accessProblem(session.user);
+    if (session.expiresAt < new Date() || problem) {
       this.clear(res);
-      throw unauthorized();
+      throw unauthorized(problem ?? undefined);
     }
     await this.prisma.session.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
     await this.issue(session.user, res, req, session.family);
@@ -109,18 +120,18 @@ export class AuthService {
 
   async forgot(email: string, req: Request) {
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user || user.status !== 'ACTIVE') return; // never reveal whether an account exists
+    if (!user || user.status !== 'ACTIVE' || !user.canSignIn) return; // never reveal whether an account exists
     const token = newToken();
     await this.prisma.userToken.create({ data: { userId: user.id, kind: 'PASSWORD_RESET', tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 3600_000) } });
     await this.notifications.email({
-      to: user.email,
+      to: email,
       subject: 'Reset your Reberon Suite password',
       heading: 'Reset your password',
       paragraphs: [`Hello ${user.name.split(' ')[0]},`, 'Someone (hopefully you) asked to reset the password for the Reberon Suite. The link works for one hour.'],
       action: { label: 'Choose a new password', url: `${env.ADMIN_URL}/reset-password?token=${token}` },
       footnote: 'If you did not ask for this, you can ignore this email.',
     });
-    await this.audit.record({ actor: user, action: 'auth.forgot', entityType: 'User', entityId: user.id, summary: 'Requested a password reset', req });
+    await this.audit.record({ actor: this.asActor(user), action: 'auth.forgot', entityType: 'User', entityId: user.id, summary: 'Requested a password reset', req });
   }
 
   async consumeToken(token: string, kind: 'PASSWORD_RESET' | 'INVITE', password: string, req: Request) {
@@ -132,13 +143,13 @@ export class AuthService {
       this.prisma.userToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
       this.prisma.session.updateMany({ where: { userId: row.userId, revokedAt: null }, data: { revokedAt: new Date() } }),
     ]);
-    await this.audit.record({ actor: row.user, action: kind === 'INVITE' ? 'auth.invite_accepted' : 'auth.password_reset', entityType: 'User', entityId: row.userId, summary: kind === 'INVITE' ? 'Accepted invitation' : 'Reset password', req });
+    await this.audit.record({ actor: this.asActor(row.user), action: kind === 'INVITE' ? 'auth.invite_accepted' : 'auth.password_reset', entityType: 'User', entityId: row.userId, summary: kind === 'INVITE' ? 'Accepted invitation' : 'Reset password', req });
   }
 
   async changePassword(userId: string, current: string, next: string, req: Request) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     if (!user.passwordHash || !(await argon2.verify(user.passwordHash, current))) throw badRequest('Your current password is not right', [{ path: 'currentPassword', message: 'Incorrect' }]);
     await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: await argon2.hash(next, ARGON_OPTS) } });
-    await this.audit.record({ actor: user, action: 'auth.password_change', entityType: 'User', entityId: userId, summary: 'Changed password', req });
+    await this.audit.record({ actor: this.asActor(user), action: 'auth.password_change', entityType: 'User', entityId: userId, summary: 'Changed password', req });
   }
 }

@@ -145,6 +145,7 @@ export const TEMPLATES: TemplateDef[] = [
   { key: 'stay.pre_arrival', label: 'Before you come', when: 'Sent automatically the day before arrival, at 10:00.', channels: ['EMAIL', 'SMS', 'WHATSAPP'], vars: [GUEST, CODE, ARRIVE, CHECKIN, v('balance', 'Balance', 'UGX 448,000'), v('directionsLink', 'Directions link', 'https://reberonhotel.ug/kapchorwa/getting-here'), LINK, WA] },
   { key: 'stay.running_late', label: 'Are you still coming?', when: 'Sent by the desk when a guest has not arrived by evening.', channels: ['SMS', 'WHATSAPP'], vars: [GUEST, CODE, HOTEL, WA] },
   { key: 'stay.thank_you', label: 'Thank you', when: 'After check-out, when the desk did not record feedback.', channels: ['EMAIL', 'SMS', 'WHATSAPP'], vars: [GUEST, v('feedbackLink', 'Feedback link', 'https://reberonhotel.ug/stay?…#feedback'), HOTEL] },
+  { key: 'document.issued', label: 'Receipt or invoice', when: 'When a receipt, refund note or invoice is sent to a guest (automatically after an online payment, or by the desk).', channels: ['EMAIL', 'SMS', 'WHATSAPP'], vars: [GUEST, v('documentName', 'Document', 'receipt RCT-2026-00042'), v('amount', 'Amount', 'UGX 448,000'), v('documentLink', 'Link to the document', 'https://api.reberonhotel.ug/v1/public/documents/…'), CODE, HOTEL] },
   { key: 'stay.otp', label: 'One-time code', when: 'A guest looks up their stay by phone (only when SMS is live).', channels: ['SMS'], vars: [v('otp', 'Code', '482913'), HOTEL] },
 ];
 

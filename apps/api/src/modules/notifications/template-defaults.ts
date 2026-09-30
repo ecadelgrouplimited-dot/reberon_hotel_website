@@ -17,6 +17,7 @@ export const ACTION_VAR: Record<string, string> = {
   'booking.hold_expired': 'bookAgainLink',
   'stay.pre_arrival': 'stayLink',
   'stay.thank_you': 'feedbackLink',
+  'document.issued': 'documentLink',
 };
 
 export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
@@ -84,6 +85,17 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   },
   { key: 'stay.thank_you', channel: 'SMS', body: 'Thank you for staying at {{hotelName}}, {{guestFirstName}}. How was it? One tap: {{feedbackLink}}' },
   { key: 'stay.thank_you', channel: 'WHATSAPP', body: 'Thank you for staying at {{hotelName}}, {{guestFirstName}}. Safe travels! If you have a minute, how was it? {{feedbackLink}}' },
+
+  {
+    key: 'document.issued',
+    channel: 'EMAIL',
+    subject: 'Your {{documentName}}',
+    heading: 'Your {{documentName}}',
+    body: 'Hello {{guestFirstName}}, here is your {{documentName}} for {{amount}} (booking {{code}}). Open it to view, print or save it as a PDF.\n\nThank you — {{hotelName}}.',
+    actionLabel: 'Open the document',
+  },
+  { key: 'document.issued', channel: 'SMS', body: '{{hotelName}}: your {{documentName}} for {{amount}} ({{code}}): {{documentLink}}' },
+  { key: 'document.issued', channel: 'WHATSAPP', body: 'Hello {{guestFirstName}}, here is your {{documentName}} for {{amount}} (booking {{code}}):\n{{documentLink}}\n\nThank you — {{hotelName}}.' },
 
   { key: 'stay.otp', channel: 'SMS', body: '{{otp}} is your {{hotelName}} code to see your booking. It expires in 10 minutes. Never share it.' },
 ];

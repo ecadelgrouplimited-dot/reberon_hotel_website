@@ -28,21 +28,33 @@ enum UserStatus {
 }
 
 model User {
-  id           String     @id @default(uuid(7)) @db.Uuid
-  email        String     @unique
-  name         String
-  phone        String?
-  passwordHash String?
-  role         Role
-  status       UserStatus @default(ACTIVE)
-  avatarId     String?    @db.Uuid
-  lastLoginAt  DateTime?
-  failedLogins Int        @default(0)
-  lockedUntil  DateTime?
-  isSeed       Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  deletedAt    DateTime?
+  id              String     @id @default(uuid(7)) @db.Uuid
+  /// Optional: staff who never sign in (cleaners, guards) may have no email
+  email           String?    @unique
+  name            String
+  phone           String?
+  jobTitle        String?
+  passwordHash    String?
+  /// The role is a starting preset; grants and revokes adjust it per person
+  role            Role
+  grants          String[]   @default([])
+  revokes         String[]   @default([])
+  /// Off: a staff record only (assignable, named on documents), no House login
+  canSignIn       Boolean    @default(true)
+  /// Kampala time, "HH:MM"; both null = any time
+  signInFrom      String?
+  signInUntil     String?
+  /// Temporary staff: access ends at this moment
+  accessExpiresAt DateTime?
+  status          UserStatus @default(ACTIVE)
+  avatarId        String?    @db.Uuid
+  lastLoginAt     DateTime?
+  failedLogins    Int        @default(0)
+  lockedUntil     DateTime?
+  isSeed          Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime?
 
   avatar       MediaAsset?        @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
   sessions     Session[]
@@ -1412,4 +1424,50 @@ model TourEvent {
 
   @@index([tourId, createdAt])
   @@index([sessionId])
+}
+
+// ═════════════════════════ Receipts, refunds and invoices ═════════════════════════
+
+enum DocumentKind {
+  RECEIPT
+  REFUND
+  INVOICE
+}
+
+/// A numbered document given to a guest. Immutable once issued: corrections void it and issue a new one.
+model IssuedDocument {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  kind            DocumentKind
+  /// e.g. RCT-2026-00042 — gap-free within its series
+  number          String       @unique
+  year            Int          @db.SmallInt
+  seq             Int
+  reservationId   String?      @db.Uuid
+  /// One receipt per payment (and one refund note per refund line)
+  paymentIntentId String?      @unique @db.Uuid
+  folioLineId     String?      @unique @db.Uuid
+  currency        Currency
+  amountMinor     BigInt
+  issuedTo        Json
+  /// Everything printed, frozen at issue time (hotel details, lines, tax, balance)
+  data            Json
+  issuedAt        DateTime     @default(now())
+  issuedById      String?      @db.Uuid
+  voidedAt        DateTime?
+  voidedById      String?      @db.Uuid
+  voidReason      String?
+  replacesId      String?      @db.Uuid
+  printCount      Int          @default(0)
+  lastPrintedAt   DateTime?
+  sentAt          DateTime?
+  isSeed          Boolean      @default(false)
+
+  @@index([reservationId])
+  @@index([kind, issuedAt])
+}
+
+/// Gap-free counters for document numbers (one row per series and year).
+model DocumentSequence {
+  series String @id
+  next   Int    @default(1)
 }

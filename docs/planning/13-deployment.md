@@ -80,7 +80,10 @@ Nothing here needs code. Each item is a screen in the House or a line in `.env.p
 | Rates | Set the rates. Then turn on **Online booking**. | Calendar & rates, then Settings → Features |
 | A camera walk (Matterport, Kuula, video) | Add it as the **Live** tour in the same place as the image walk. It replaces the drawings everywhere. Then turn on **Virtual tours**. | Website → Virtual tours, Settings → Features |
 | SMS live | Optionally turn on **Text a code before showing a stay**. | Settings → Features |
-| Launch day | Remove every demo row: `docker compose … run --rm migrate npx tsx seed/purge.ts`. The seed users are kept so you can still sign in; disable them in People. | Server |
+| TIN and VAT registration | Enter the registered company name and TIN. If the hotel is VAT-registered, switch on "show the VAT included" so invoices carry the VAT line. | Settings → Receipts and invoices |
+| A receipt printer at the desk | Any 80 mm thermal printer that the browser can print to. Set "Default paper" to 80 mm. | Settings → Receipts and invoices |
+| Staff | Add everyone, including people who never sign in. Adjust each person's access, hours and end date. | Admin → People and access |
+| Launch day | Remove every demo row: `docker compose … run --rm migrate npx tsx seed/purge.ts`. This also removes the demo receipts and restarts document numbering at 00001. The seed users are kept so you can still sign in; switch them off in People. | Server |
 
 Until a channel is connected, nothing breaks:
 - Payments stay simulated outside production. In production they refuse politely and point guests to WhatsApp.

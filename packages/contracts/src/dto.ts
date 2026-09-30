@@ -196,13 +196,34 @@ export interface MeDTO {
 
 export interface UserDTO {
   id: string;
-  email: string;
+  email: string | null;
   name: string;
   phone: string | null;
+  jobTitle: string | null;
   role: Role;
   status: UserStatus;
+  /** Off: a staff record only, no House login. */
+  canSignIn: boolean;
+  signInFrom: string | null;
+  signInUntil: string | null;
+  accessExpiresAt: string | null;
+  grants: string[];
+  revokes: string[];
+  /** Effective: role preset + grants − revokes. */
+  permissions: string[];
+  hasPassword: boolean;
+  activeSessions: number;
   lastLoginAt: string | null;
   createdAt: string;
+}
+
+export interface SessionDTO {
+  id: string;
+  device: string;
+  ip: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  current: boolean;
 }
 
 export interface AdminMediaDTO extends MediaRef {

@@ -2,12 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { z } from 'zod';
 import type { FeedbackDTO, GuestProfileDTO, GuestSummaryDTO, MoneyByCurrency, zGuestPatch } from '@reberon/contracts';
-import { can } from '@reberon/contracts';
 import { hotelToday, normalizePhone } from '@reberon/utils';
 import type { Prisma } from '@reberon/db';
 import { PrismaService } from '../../common/prisma.service.js';
 import { AuditService } from '../../common/audit.service.js';
-import type { AuthUser } from '../../common/auth.js';
+import { has, type AuthUser } from '../../common/auth.js';
 import { badRequest, conflict, notFound } from '../../common/errors.js';
 import { last4, seal } from '../../common/crypto.js';
 import { Events } from '../../common/events.js';
@@ -57,7 +56,7 @@ export class GuestsService {
     if (q.filter === 'returning') where.reservations = { some: { status: 'CHECKED_OUT' } };
     const rows = await this.prisma.contact.findMany({ where, include: { reservations: { select: { status: true, arrival: true, departure: true, paidMinor: true, currency: true } } }, orderBy: { updatedAt: 'desc' }, take: 400 });
     const today = hotelToday();
-    const money = can(viewer.role, 'payments:record');
+    const money = has(viewer, 'payments:record');
     let data = rows.map((c) => {
       const r = roll(c.reservations, today);
       return { id: c.id, name: c.name, phone: c.phone, email: c.email, country: c.country, stays: r.stays, nights: r.nights, lastStay: r.lastStay, nextStay: r.nextStay, isVip: c.isVip, tags: c.tags, ...(money ? { spent: r.spent } : {}) };
@@ -78,7 +77,7 @@ export class GuestsService {
     ]);
     const today = hotelToday();
     const r = roll(reservations, today);
-    const money = can(viewer.role, 'payments:record');
+    const money = has(viewer, 'payments:record');
     // Preferred room type: explicit, else the one they stayed in most.
     let pref = c.preferredRoomTypeId;
     if (!pref) {

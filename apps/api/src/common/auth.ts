@@ -2,10 +2,11 @@ import { CanActivate, ExecutionContext, Injectable, SetMetadata, createParamDeco
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { jwtVerify, SignJWT } from 'jose';
-import { can, type Permission, type Role } from '@reberon/contracts';
+import { type Permission, type Role } from '@reberon/contracts';
 import { env } from '../config.js';
 import { forbidden, unauthorized } from './errors.js';
 import { PrismaService } from './prisma.service.js';
+import { ACCESS_SELECT, accessProblem, permissionsOf } from './access.js';
 
 export const ACCESS_COOKIE = 'rb_at';
 export const REFRESH_COOKIE = 'rb_rt';
@@ -19,6 +20,14 @@ export interface AuthUser {
   email: string;
   name: string;
   role: Role;
+  /** Effective permissions (role preset ± per-person changes), set by the guard. */
+  perms?: Permission[];
+}
+
+/** Whether this person may do this: their own permissions when known, else their role's preset. */
+export function has(user: AuthUser | null | undefined, p: Permission): boolean {
+  if (!user) return false;
+  return user.perms ? user.perms.includes(p) : permissionsOf({ role: user.role, grants: [], revokes: [] }).includes(p);
 }
 
 export async function signAccessToken(user: AuthUser) {
@@ -73,12 +82,16 @@ export class AdminGuard implements CanActivate {
     const token = req.cookies?.[ACCESS_COOKIE] ?? bearer(req);
     const claims = token ? await verifyAccessToken(token) : null;
     if (!claims) throw unauthorized();
-    const user = await this.prisma.user.findUnique({ where: { id: claims.id }, select: { id: true, email: true, name: true, role: true, status: true, deletedAt: true } });
-    if (!user || user.status !== 'ACTIVE' || user.deletedAt) throw unauthorized('Your account is not active');
-    req.user = { id: user.id, email: user.email, name: user.name, role: user.role };
+    // Re-read every time: disabling someone, ending their hours or changing their access applies at once.
+    const user = await this.prisma.user.findUnique({ where: { id: claims.id }, select: ACCESS_SELECT });
+    if (!user) throw unauthorized('Your account is not active');
+    const problem = accessProblem(user);
+    if (problem) throw unauthorized(problem);
+    const mine = permissionsOf(user);
+    req.user = { id: user.id, email: user.email ?? '', name: user.name, role: user.role, perms: mine };
 
     const perms = this.reflector.getAllAndOverride<Permission[]>('permissions', [ctx.getHandler(), ctx.getClass()]) ?? [];
-    for (const p of perms) if (!can(user.role, p)) throw forbidden();
+    for (const p of perms) if (!mine.includes(p)) throw forbidden();
     return true;
   }
 }

@@ -370,3 +370,45 @@ describe('the walk (Movement III) and messaging', () => {
     assert.equal(r.status, 422);
   });
 });
+
+describe('people, access and receipts', () => {
+  test('staff records without sign-in are on the list and can be given cleaning', async () => {
+    const owner = await as('owner@reberonhotel.ug');
+    const people = (await owner.get('/admin/users')).body as { id: string; name: string; canSignIn: boolean; email: string | null }[];
+    const esther = people.find((p) => p.name === 'Esther Chebet');
+    assert.ok(esther && !esther.canSignIn && esther.email === null);
+    const staff = (await owner.get('/admin/housekeeping')).body.staff as { id: string }[];
+    assert.ok(staff.some((s) => s.id === esther!.id));
+  });
+
+  test('per-person access: owner-only powers cannot be granted; changes are reversible', async () => {
+    const owner = await as('owner@reberonhotel.ug');
+    const people = (await owner.get('/admin/users')).body as { id: string; email: string | null; grants: string[]; revokes: string[] }[];
+    const joan = people.find((p) => p.email === 'relief.desk@reberonhotel.ug')!;
+    const r = await owner.patch(`/admin/users/${joan.id}`, { grants: ['reports:read', 'vault:manage'] });
+    assert.equal(r.status, 200);
+    assert.ok(r.body.permissions.includes('reports:read'));
+    assert.ok(!r.body.permissions.includes('vault:manage'));
+    assert.ok(!r.body.permissions.includes('payments:record'), 'her removed permission stays removed');
+    const back = await owner.patch(`/admin/users/${joan.id}`, { grants: joan.grants });
+    assert.deepEqual(back.body.grants, joan.grants);
+    const self = (await owner.get('/admin/auth/me')).body.id as string;
+    assert.equal((await owner.patch(`/admin/users/${self}`, { revokes: ['reports:read'] })).status, 400);
+    assert.equal((await (await as('manager@reberonhotel.ug')).patch(`/admin/users/${joan.id}`, { grants: [] })).status, 403);
+  });
+
+  test('receipts are numbered, verifiable and walled', async () => {
+    const owner = await as('owner@reberonhotel.ug');
+    const reg = await owner.get('/admin/documents?kind=RECEIPT');
+    assert.equal(reg.status, 200);
+    const docs = reg.body.data as { number: string; checkCode: string; amountMinor: string }[];
+    assert.ok(docs.length > 0);
+    assert.ok(docs.every((d) => /^RCT-\d{4}-\d{5}$/.test(d.number)));
+    const v = await new Client().get(`/public/documents/verify?number=${docs[0]!.number}&check=${docs[0]!.checkCode}`);
+    assert.equal(v.body.valid, true);
+    assert.equal(v.body.amountMinor, docs[0]!.amountMinor);
+    assert.deepEqual((await new Client().get(`/public/documents/verify?number=${docs[0]!.number}&check=0000-0000`)).body, { valid: false });
+    assert.equal((await (await as('housekeeping@reberonhotel.ug')).get('/admin/documents')).status, 403);
+    assert.equal((await (await as('desk@reberonhotel.ug')).post(`/admin/documents/00000000-0000-7000-8000-000000000000/void`, { reason: 'test' })).status, 403);
+  });
+});

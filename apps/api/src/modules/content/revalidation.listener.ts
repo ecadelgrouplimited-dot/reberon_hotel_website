@@ -58,7 +58,7 @@ export class RevalidationListener implements OnModuleInit, OnModuleDestroy {
     const body = JSON.stringify({ tags: [...tags, 'content'], ts: Date.now() });
     const signature = createHmac('sha256', env.REVALIDATE_SECRET).update(body).digest('hex');
     try {
-      const res = await fetch(`${env.WEB_URL}/api/revalidate`, {
+      const res = await fetch(`${env.WEB_INTERNAL_URL ?? env.WEB_URL}/api/revalidate`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-signature': signature },
         body,

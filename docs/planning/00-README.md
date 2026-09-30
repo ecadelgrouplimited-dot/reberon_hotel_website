@@ -19,6 +19,7 @@ When the spec and these documents disagree, the spec wins on **scope**, these do
 | 10 | [Security & RBAC](10-security.md) | Auth, permissions matrix, audit, secrets, threat notes |
 | 11 | [Engineering workflow](11-engineering.md) | Conventions, testing, CI, environments, deployment |
 | 12 | [Decisions log](12-decisions-log.md) | ADRs and open questions for Denis / Wilson |
+| 13 | [Deployment and go-live](13-deployment.md) | The server, CI, and what to plug in when keys and data arrive |
 
 ## One-paragraph summary
 

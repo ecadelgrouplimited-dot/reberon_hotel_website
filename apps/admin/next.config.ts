@@ -8,6 +8,9 @@ const API = process.env.API_URL ?? 'http://localhost:4000';
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // Self-contained server for the Docker image (traces only what it needs from the monorepo).
+  output: 'standalone',
+  outputFileTracingRoot: resolve(import.meta.dirname, '../..'),
   poweredByHeader: false,
   transpilePackages: ['@reberon/contracts', '@reberon/utils'],
   env: { NEXT_PUBLIC_WEB_URL: process.env.WEB_URL ?? 'http://localhost:3000', NEXT_PUBLIC_MEDIA_URL: process.env.MEDIA_PUBLIC_URL ?? 'http://localhost:4000/media' },

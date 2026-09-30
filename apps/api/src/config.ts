@@ -12,13 +12,16 @@ const schema = z.object({
   REDIS_URL: z.string().default('redis://localhost:6379'),
   API_URL: z.string().url().default('http://localhost:4000'),
   WEB_URL: z.string().url().default('http://localhost:3000'),
+  /** How the API reaches the website from inside the server (Docker: http://web:3000). Defaults to WEB_URL. */
+  WEB_INTERNAL_URL: z.string().url().optional(),
   ADMIN_URL: z.string().url().default('http://localhost:3001'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   REVALIDATE_SECRET: z.string().min(16),
   PREVIEW_SECRET: z.string().min(16),
   /** Encrypts guest ID numbers at rest. Falls back to a key derived from JWT_SECRET in development. */
   DATA_KEY: z.string().min(32).optional(),
-  COOKIE_SECURE: z.coerce.boolean().default(false),
+  /** "true"/"1" only — z.coerce.boolean() would read the string "false" as true. */
+  COOKIE_SECURE: z.string().default('false').transform((v) => v === 'true' || v === '1'),
   STORAGE_DRIVER: z.enum(['local']).default('local'),
   STORAGE_LOCAL_DIR: z.string().default('./storage'),
   MEDIA_PUBLIC_URL: z.string().url().default('http://localhost:4000/media'),
@@ -36,9 +39,14 @@ const schema = z.object({
   BOOKING_HOLD_MINUTES: z.coerce.number().int().min(5).max(120).default(20),
 });
 
-const parsed = schema.safeParse(process.env);
+// A blank line in an env file means "not set", not "empty string".
+const parsed = schema.safeParse(Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== '')));
 if (!parsed.success) {
   console.error('Invalid environment:', parsed.error.flatten().fieldErrors);
+  process.exit(1);
+}
+if (parsed.data.NODE_ENV === 'production' && !parsed.data.DATA_KEY) {
+  console.error('Set DATA_KEY in production: it encrypts guest ID numbers and the integrations vault.');
   process.exit(1);
 }
 if (parsed.data.NODE_ENV === 'production' && /dev-only|change-me/.test(parsed.data.JWT_SECRET + parsed.data.REVALIDATE_SECRET)) {

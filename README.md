@@ -67,5 +67,7 @@ A manager edits a page in the House. The draft autosaves, and the preview beside
   - the House for content, inbox, first-stay list, media, settings, people and audit
 - **Movement II (the Door):** built and verified, switched off (`features.bookingEnabled`) until rates and Pesapal keys are ready.
 - **Movement IV (the House):** built and verified: front desk, room rack, housekeeping, guests and memory, feedback, reports. Sign in as `desk@`, `housekeeping@` or the owner to see each view.
-- **Next:** Movement III (tours and partners) once field data exists; CI and deploy; real Pesapal and SMS. See [`docs/planning/09-roadmap.md`](docs/planning/09-roadmap.md).
+- **Movement III (the Walk):** built, switched off (`features.toursEnabled`). Image walks for every room and the hall are seeded; a camera walk added later replaces them in place.
+- **Integrations and messaging:** Pesapal, SMS, WhatsApp and SMTP keys are entered in House → Integrations (encrypted); message wording in House → Messages. Until a channel is connected, messages are kept in Sent messages for staff to send by hand.
+- **Deployment:** ready. Needs a domain and a server. See [`docs/planning/13-deployment.md`](docs/planning/13-deployment.md) for the first deploy and the go-live checklist.
 - **Still to settle:** open questions for Denis and Wilson (domain, logo, real phone numbers, room mix, prices) are listed in [`docs/planning/12-decisions-log.md`](docs/planning/12-decisions-log.md). Until then the seed uses clearly marked placeholders, and every image is labelled as a drawing.

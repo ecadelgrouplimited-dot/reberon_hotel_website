@@ -12,7 +12,8 @@ export function buildMetadata(site: SiteDTO, opts: { title?: LText | string; seo
   const isHome = opts.path === '/';
   return {
     metadataBase: new URL(WEB_URL),
-    title: isHome ? site.seo.defaultTitle : site.seo.titleTemplate.replace('%s', pageTitle || site.name),
+    // Already formatted here, so the layout's template must not wrap it a second time.
+    title: { absolute: isHome ? site.seo.defaultTitle : site.seo.titleTemplate.replace('%s', pageTitle || site.name) },
     description,
     alternates: { canonical: opts.path },
     robots: opts.seo?.noindex ? { index: false, follow: true } : undefined,

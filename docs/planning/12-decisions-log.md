@@ -23,6 +23,10 @@
 | ADR-017 | 2026-09-30 | The guest profile is the existing `Contact`, extended (not a separate `Guest` table as sketched in 03 §9). Merges set `mergedIntoId` and move bookings, conversations and list entries | Enquiries, first-stay names and bookings already point at Contact, so a returning guest's whole history joins up with no copying | Accepted |
 | ADR-018 | 2026-09-30 | Room occupancy is `RoomAssignment` rows guarded by Postgres exclusion constraints; a room block raises `InventoryDay.blockedRooms` atomically and is refused if it would oversell | The database, not the screen, is what stops a double-booked room | Accepted |
 | ADR-019 | 2026-09-30 | Room moves stay within the same room type for now | Changing type mid-stay alters what was sold; that needs a priced amendment flow, planned with Movement II changes | Accepted |
+| ADR-020 | 2026-09-30 | Provider keys live in an encrypted `Integration` table (AES-256-GCM with `DATA_KEY`), owner-only, with "test connection"; the environment stays as a fallback | The owner can connect Pesapal, SMS and WhatsApp without a deploy; keys never reach a browser; nothing changes until they are entered | Accepted |
+| ADR-021 | 2026-09-30 | Every guest message goes through an outbox. A channel that is not connected yet records the message as NOT_CONNECTED (with a wa.me link for WhatsApp) instead of failing | Build now, plug in later: the house keeps working and staff can send by hand | Accepted |
+| ADR-022 | 2026-09-30 | Tours are addressed by slot (space + room type + variant); a published LIVE tour beats PRE_OPENING. An "image walk" provider uses the media library | "Live rooms replace drawings — same slot" from the spec, and a walk exists before any scan does | Accepted |
+| ADR-023 | 2026-09-30 | Production is Docker Compose on one VPS with Caddy for HTTPS; standalone Next.js images; the website is built against the running API; classic Docker builder (BuildKit optional) | Smallest thing that works for ten rooms; nothing to install beyond Docker | Accepted |
 
 ## Open questions (need answers from Denis / Wilson)
 

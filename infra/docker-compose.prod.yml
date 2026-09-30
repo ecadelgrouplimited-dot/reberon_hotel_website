@@ -1,0 +1,122 @@
+# Production: one small VPS (ADR-006). Run everything through infra/deploy.sh.
+#   docker compose --env-file .env.production -f infra/docker-compose.prod.yml …
+name: reberon-prod
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://reberon:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/reberon?schema=public
+  REDIS_URL: redis://redis:6379
+  API_URL: https://${API_DOMAIN}
+  WEB_URL: https://${SITE_DOMAIN}
+  WEB_INTERNAL_URL: http://web:3000
+  ADMIN_URL: https://${ADMIN_DOMAIN}
+  MEDIA_PUBLIC_URL: https://${API_DOMAIN}/media
+  COOKIE_SECURE: "true"
+  SITE_ENV: ${SITE_ENV:-production}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: reberon
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: reberon
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U reberon"], interval: 5s, retries: 20 }
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 20 }
+
+  api:
+    image: reberon/api:${TAG:-latest}
+    build: { context: .., dockerfile: infra/docker/api.Dockerfile }
+    restart: unless-stopped
+    env_file: ../.env.production
+    environment: *app-env
+    volumes: [media:/data/storage]
+    # Published on the host loopback only, so the website can be built against it.
+    ports: ["127.0.0.1:4000:4000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  # One-off: migrations and reference data (settings, amenities). Never demo data.
+  migrate:
+    image: reberon/api:${TAG:-latest}
+    profiles: [tools]
+    env_file: ../.env.production
+    environment: *app-env
+    working_dir: /app/packages/db
+    command: ["sh", "-c", "npx prisma migrate deploy && npx tsx seed/index.ts --reference-only"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  web:
+    image: reberon/web:${TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/docker/next.Dockerfile
+      network: host
+      args:
+        APP: web
+        API_URL: http://127.0.0.1:4000
+        WEB_URL: https://${SITE_DOMAIN}
+        ADMIN_URL: https://${ADMIN_DOMAIN}
+        MEDIA_PUBLIC_URL: https://${API_DOMAIN}/media
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN}
+        NEXT_PUBLIC_WEB_URL: https://${SITE_DOMAIN}
+        SITE_ENV: ${SITE_ENV:-production}
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      API_URL: http://api:4000
+      ADMIN_URL: https://${ADMIN_DOMAIN}
+      SITE_ENV: ${SITE_ENV:-production}
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET}
+      PREVIEW_SECRET: ${PREVIEW_SECRET}
+    depends_on: [api]
+
+  admin:
+    image: reberon/admin:${TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/docker/next.Dockerfile
+      args:
+        APP: admin
+        # The House proxies /v1 to the API inside the network (same-origin cookies).
+        API_URL: http://api:4000
+        WEB_URL: https://${SITE_DOMAIN}
+        ADMIN_URL: https://${ADMIN_DOMAIN}
+        MEDIA_PUBLIC_URL: https://${API_DOMAIN}/media
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN}
+        NEXT_PUBLIC_WEB_URL: https://${SITE_DOMAIN}
+    restart: unless-stopped
+    environment: { PORT: "3001" }
+    depends_on: [api]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, admin, api]
+
+volumes:
+  pgdata:
+  redisdata:
+  media:
+  caddy_data:
+  caddy_config:

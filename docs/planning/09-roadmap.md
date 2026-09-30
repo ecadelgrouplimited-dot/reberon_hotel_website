@@ -4,7 +4,7 @@ Phases map to the spec's Movements. Each phase ends with a demo on staging and t
 
 ## Status (2026-09-30)
 
-- **Phase 0:** done. MinIO is deferred (ADR-015), and CI is still to wire up (0.10).
+- **Phase 0:** done. MinIO is deferred (ADR-015). CI is wired (`.github/workflows/ci.yml`).
 - **Phase 1:** done except 1.15 (production deploy). That waits on the domain and hosting decisions (Q2, Q9).
 - **Phase 2 (Movement II):** built and verified. Switched off until rates are confirmed and Pesapal keys exist (Q10):
   - rates and availability, holds, reservations and folio, Pesapal plus a test provider
@@ -28,7 +28,12 @@ Phases map to the spec's Movements. Each phase ends with a demo on staging and t
   - inventory still matches live reservations on every night after check-in, early check-out, move, no-show and blocks
   - housekeeping never receives money or phone numbers, and cannot reach the desk, guests or reports
   - walk-in → check-in → check-out works in Chrome
-- **Phase 3 (Movement III):** deferred on purpose. It needs tours, guides and partners from the field.
+- **Phase 3 (Movement III, the Walk):** built and verified; switched off (`features.toursEnabled`) until the owner is ready:
+  - tours per slot (room type, hall cleared / set, lobby, compound, beyond the gate) from Matterport, Kuula, video, any embed, or an image walk built from the library
+  - a published live tour replaces the pre-opening one in the same slot, with no page edits
+  - hotspots as labelled facts; anonymous analytics down to "walked, then booked and paid"
+- **Integrations and messaging (M22 vault, M09, M10):** built and verified. Encrypted keys for Pesapal, Africa's Talking, WhatsApp Cloud API and SMTP; editable templates; an outbox that records unconnected channels instead of failing
+- **Deployment:** Docker images, production compose file with Caddy, deploy and backup scripts, and CI. Verified from a clean checkout and by running the images. Waits only on the domain and the server (Q2, Q9). See [13-deployment.md](13-deployment.md)
 
 Verified end to end in a real browser:
 - publish → live on the website in under 1 second

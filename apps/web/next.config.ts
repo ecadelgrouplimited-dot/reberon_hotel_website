@@ -7,6 +7,9 @@ loadEnvConfig(resolve(import.meta.dirname, '../..'), process.env.NODE_ENV !== 'p
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // Self-contained server for the Docker image (traces only what it needs from the monorepo).
+  output: 'standalone',
+  outputFileTracingRoot: resolve(import.meta.dirname, '../..'),
   poweredByHeader: false,
   transpilePackages: ['@reberon/contracts', '@reberon/utils'],
   images: {

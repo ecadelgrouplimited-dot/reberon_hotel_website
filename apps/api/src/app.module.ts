@@ -14,6 +14,7 @@ import { InboxModule } from './modules/inbox/inbox.module.js';
 import { MediaModule } from './modules/media/media.module.js';
 import { BookingModule } from './modules/booking/booking.module.js';
 import { HouseModule } from './modules/house/house.module.js';
+import { IntegrationsModule } from './modules/integrations/integrations.module.js';
 import { HealthController } from './modules/health.controller.js';
 
 @Module({
@@ -22,6 +23,7 @@ import { HealthController } from './modules/health.controller.js';
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 300 }]),
     CommonModule,
+    IntegrationsModule,
     NotificationsModule,
     ContentModule,
     AuthModule,

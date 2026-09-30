@@ -58,6 +58,7 @@ const FEATURES: [string, string, string][] = [
   ['features.progressEnabled', 'Watch the hotel rise', 'Show construction progress on the website.'],
   ['features.bookingEnabled', 'Online booking', 'Movement II. Switches “Claim a first stay” to “Book”. Needs rates and payments first.'],
   ['features.toursEnabled', 'Virtual tours', 'Movement III. Shows “Walk this room” where a tour exists.'],
+  ['features.stayOtp', 'Text a code before showing a stay', 'Guests who look up a booking get a 6-digit SMS code. Only works once SMS is connected.'],
 ];
 
 export default function SettingsPage() {

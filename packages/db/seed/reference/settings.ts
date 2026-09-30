@@ -34,6 +34,7 @@ export const SETTING_DEFAULTS: { key: string; group: SettingGroup; value: unknow
   { key: 'features.waitlistEnabled', group: 'FEATURES', value: true },
   { key: 'features.progressEnabled', group: 'FEATURES', value: true },
   { key: 'features.toursEnabled', group: 'FEATURES', value: false },
+  { key: 'features.stayOtp', group: 'FEATURES', value: false },
   { key: 'notifications.staffEmails', group: 'NOTIFICATIONS', value: ['frontdesk@reberonhotel.ug'] },
   { key: 'notifications.ownerBriefTime', group: 'NOTIFICATIONS', value: '19:00' },
 ];

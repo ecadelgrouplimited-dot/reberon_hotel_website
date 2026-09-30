@@ -14,6 +14,7 @@ import { PageHeader, Pill, Section, Skeleton, Status } from '@/components/ui/bit
 import { Dialog } from '@/components/ui/dialog';
 import { SelectInput, Switch, TextArea, TextInput } from '@/components/ui/field';
 import { StayPanel, type StayDetail } from '@/components/house/stay-panel';
+import { ReservationMessages } from '@/components/messages/reservation-messages';
 
 type Detail = {
   id: string; code: string; status: string; source: string; currency: string; arrival: string; departure: string; nights: number; adults: number; children: number;
@@ -135,6 +136,8 @@ export default function ReservationPage({ params }: { params: Promise<{ id: stri
               </ul>
             )}
           </Section>
+
+          <ReservationMessages reservationId={r.id} hasEmail={!!r.contact.email} hasPhone={!!r.contact.phone} />
 
           <Section title="History">
             <ol className="relative grid gap-3 border-l border-line pl-5 text-[13px]">

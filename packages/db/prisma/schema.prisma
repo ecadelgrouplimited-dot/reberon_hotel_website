@@ -1189,3 +1189,110 @@ model Feedback {
 
   reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 }
+
+// ═════════════════════ Integrations vault & messaging (M22, M09, M10) ═════════════════════
+
+enum IntegrationKind {
+  PESAPAL
+  SMS_AFRICASTALKING
+  WHATSAPP_CLOUD
+  SMTP
+}
+
+enum IntegrationMode {
+  TEST
+  LIVE
+}
+
+/// Provider keys live here, sealed with AES-256-GCM. Never sent to a browser.
+model Integration {
+  kind            IntegrationKind @id
+  enabled         Boolean         @default(false)
+  mode            IntegrationMode @default(TEST)
+  /// Non-secret settings (sender ID, phone number ID, username, host…)
+  config          Json            @default("{}")
+  /// Sealed JSON of the secret fields
+  secretsEnc      String?
+  /// Last four characters of each secret, for display
+  secretHints     Json            @default("{}")
+  lastTestAt      DateTime?
+  lastTestOk      Boolean?
+  lastTestMessage String?
+  updatedById     String?         @db.Uuid
+  updatedAt       DateTime        @updatedAt
+}
+
+enum MessageChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+/// The words guests receive, editable by the owner. {{variables}} are filled at send time.
+model MessageTemplate {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  key              String
+  channel          MessageChannel
+  locale           String         @default("en")
+  subject          String?
+  heading          String?
+  body             String
+  actionLabel      String?
+  /// WhatsApp Cloud API: the approved template name at Meta (business-initiated messages need one)
+  providerTemplate String?
+  isActive         Boolean        @default(true)
+  updatedById      String?        @db.Uuid
+  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime       @default(now())
+
+  @@unique([key, channel, locale])
+}
+
+enum OutboundStatus {
+  QUEUED
+  SENT
+  FAILED
+  /// Written down but not sent: the channel is not connected yet (a wa.me link is kept for staff)
+  NOT_CONNECTED
+  SKIPPED
+}
+
+/// Every message the house sends a guest, whatever the channel.
+model OutboundMessage {
+  id            String         @id @default(uuid(7)) @db.Uuid
+  channel       MessageChannel
+  to            String
+  templateKey   String?
+  subject       String?
+  body          String
+  status        OutboundStatus @default(QUEUED)
+  provider      String?
+  providerRef   String?
+  error         String?
+  attempts      Int            @default(0)
+  /// For NOT_CONNECTED WhatsApp: a click-to-send link for staff
+  fallbackUrl   String?
+  reservationId String?        @db.Uuid
+  contactId     String?        @db.Uuid
+  sentById      String?        @db.Uuid
+  isSeed        Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  sentAt        DateTime?
+
+  @@index([createdAt])
+  @@index([reservationId, templateKey])
+}
+
+/// One-time codes for guests finding their stay by phone (only when SMS is live).
+model StayOtp {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  code      String
+  phone     String
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([code, phone])
+}

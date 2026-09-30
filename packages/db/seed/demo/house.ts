@@ -263,7 +263,8 @@ export async function seedArrivalsToday(deskId: string) {
     for (const room of rooms) {
       const taken = await prisma.roomAssignment.count({ where: { roomId: room.id, releasedAt: null, fromDate: { lt: day(addDays(today, 2)) }, toDate: { gt: day(today) } } });
       if (taken) continue;
-      await prisma.inventoryDay.createMany({ data: nights.map((d) => ({ roomTypeId: room.roomTypeId, date: day(d), totalRooms: await prisma.room.count({ where: { roomTypeId: room.roomTypeId, isActive: true } }) })), skipDuplicates: true });
+      const typeCount = await prisma.room.count({ where: { roomTypeId: room.roomTypeId, isActive: true } });
+      await prisma.inventoryDay.createMany({ data: nights.map((d) => ({ roomTypeId: room.roomTypeId, date: day(d), totalRooms: typeCount })), skipDuplicates: true });
       const inv = await prisma.inventoryDay.findMany({ where: { roomTypeId: room.roomTypeId, date: { in: nights.map(day) } } });
       if (inv.length < 2 || inv.some((r) => r.totalRooms - r.soldRooms - r.heldRooms - r.blockedRooms < 1)) continue;
       const rates = await prisma.rate.findMany({ where: { ratePlanId: plan.id, roomTypeId: room.roomTypeId, currency: 'UGX', date: { in: nights.map(day) } }, orderBy: { date: 'asc' } });

@@ -10,7 +10,7 @@ import type { AuthUser } from '../../common/auth.js';
 import { badRequest, conflict, forbidden, notFound } from '../../common/errors.js';
 import { last4, seal } from '../../common/crypto.js';
 import { env } from '../../config.js';
-import { NotificationsService } from '../notifications/notifications.service.js';
+import { MessagingService } from '../notifications/messaging.service.js';
 import { BookingService } from '../booking/booking.service.js';
 import { InventoryService, day, iso, nightsOf, type Tx } from '../booking/inventory.service.js';
 import { RackService } from './rack.service.js';
@@ -32,7 +32,7 @@ export class DeskService {
     private readonly inventory: InventoryService,
     private readonly booking: BookingService,
     private readonly rack: RackService,
-    private readonly notifications: NotificationsService,
+    private readonly messaging: MessagingService,
   ) {}
 
   /* ───────── board ───────── */
@@ -236,20 +236,11 @@ export class DeskService {
       return { r, early };
     });
     await this.audit.record({ actor, action: 'desk.check_out', entityType: 'Reservation', entityId: id, summary: `Checked out ${pre.code}${out.early ? ' (early)' : ''}` });
-    if (out.r.contact.email && !body.feedback) await this.thankYou(out.r.code, out.r.contact.name, out.r.contact.email).catch(() => undefined);
+    if (!body.feedback) await this.messaging.forReservation('stay.thank_you', id).catch(() => undefined);
     return this.booking.detail(id);
   }
 
-  private async thankYou(code: string, name: string, email: string) {
-    const link = `${env.WEB_URL}/stay?code=${code}&t=${this.booking.accessToken(code)}#feedback`;
-    await this.notifications.email({
-      to: email,
-      subject: 'Thank you for staying with us',
-      heading: `Safe travels, ${name.split(' ')[0]}.`,
-      paragraphs: ['Thank you for staying at Reberon. If you have a minute, tell us how it was — one tap is enough, and the owner reads every answer.'],
-      action: { label: 'How was your stay?', url: link },
-    });
-  }
+
 
   /* ───────── no-show ───────── */
 

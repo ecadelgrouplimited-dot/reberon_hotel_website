@@ -34,6 +34,7 @@ export const PERMISSIONS = [
   'guests:merge',
   'feedback:manage',
   'reports:read',
+  'messages:read',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -43,7 +44,7 @@ const ALL = [...PERMISSIONS];
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   OWNER: ALL,
   MANAGER: ALL.filter((p) => !['settings:features', 'users:manage', 'vault:manage'].includes(p)),
-  DESK: ['dashboard:view', 'media:read', 'media:upload', 'inbox:read', 'inbox:write', 'waitlist:read', 'waitlist:write', 'rooms:status', 'bookings:read', 'bookings:write', 'rates:read', 'payments:record', 'desk:operate', 'rooms:inspect', 'guests:read', 'guests:write'],
+  DESK: ['dashboard:view', 'media:read', 'media:upload', 'inbox:read', 'inbox:write', 'waitlist:read', 'waitlist:write', 'rooms:status', 'bookings:read', 'bookings:write', 'rates:read', 'payments:record', 'desk:operate', 'rooms:inspect', 'guests:read', 'guests:write', 'messages:read'],
   HOUSEKEEPING: ['rooms:status'],
 };
 

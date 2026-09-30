@@ -3,7 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { z } from 'zod';
 import {
-  zAvailabilityQuery, zBookingInput, zStayLookup, zManualReservationInput, zRecordPaymentInput, zCancelInput, zReservationPatch, zRatePlanInput, zRateBulkInput,
+  zAvailabilityQuery, zBookingInput, zStayLookup, zStayVerify, zManualReservationInput, zRecordPaymentInput, zCancelInput, zReservationPatch, zRatePlanInput, zRateBulkInput,
   zInventoryPatch, zExtraInput, zPackageInput,
 } from '@reberon/contracts';
 import { normalizePhone } from '@reberon/utils';
@@ -16,6 +16,7 @@ import { badRequest, notFound } from '../../common/errors.js';
 import { env } from '../../config.js';
 import { lt } from '../content/mappers.js';
 import { BookingService } from './booking.service.js';
+import { MessagingService } from '../notifications/messaging.service.js';
 import { PricingService, toExtraDTO } from './pricing.service.js';
 import { PaymentsService } from './payments.service.js';
 import { InventoryService, day, iso, nightsOf } from './inventory.service.js';
@@ -30,6 +31,7 @@ export class PublicBookingController {
     private readonly prisma: PrismaService,
     private readonly pricing: PricingService,
     private readonly booking: BookingService,
+    private readonly messaging: MessagingService,
   ) {}
 
   @Get('availability')
@@ -73,7 +75,21 @@ export class PublicBookingController {
     const r = await this.prisma.reservation.findUnique({ where: { code: body.code }, include: { contact: true } });
     const phone = normalizePhone(body.phone);
     if (!r || !phone || r.contact.phone !== phone) throw notFound('No booking matches that code and phone number');
+    // With SMS live and the owner's switch on, prove the phone is theirs first.
+    if (await this.messaging.otpRequired()) {
+      await this.messaging.startOtp(r.code, phone, r.id);
+      return { code: r.code, otp: true };
+    }
     return { code: r.code, token: this.booking.accessToken(r.code) };
+  }
+
+  @Post('stay/verify')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 15 * 60_000 } })
+  async verify(@Body(new ZodPipe(zStayVerify)) body: z.infer<typeof zStayVerify>) {
+    const phone = normalizePhone(body.phone);
+    if (!phone || !(await this.messaging.verifyOtp(body.code, phone, body.otp))) throw badRequest('That code is not right, or it has expired. Ask for a new one.');
+    return { code: body.code, token: this.booking.accessToken(body.code) };
   }
 
   /** Test payments only: never available with real money. */

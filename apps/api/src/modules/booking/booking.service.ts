@@ -1,7 +1,8 @@
 import { HttpStatus, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Queue, Worker } from 'bullmq';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual } from 'node:crypto';
+import { stayToken } from '../../common/stay-token.js';
 import type { z } from 'zod';
 import type { BookingStartedDTO, CurrencyCode, GuestStayDTO, ReservationSummaryDTO, zBookingInput, zManualReservationInput } from '@reberon/contracts';
 import { t } from '@reberon/contracts';
@@ -14,6 +15,7 @@ import { AppError, badRequest, conflict, notFound } from '../../common/errors.js
 import type { AuthUser } from '../../common/auth.js';
 import { env } from '../../config.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { MessagingService } from '../notifications/messaging.service.js';
 import { lt, toMediaRef } from '../content/mappers.js';
 import { InventoryService, InventoryUnavailable, day, iso, nightsOf, type Tx } from './inventory.service.js';
 import { PricingService, extraTotal, roundDeposit, type PolicyRule } from './pricing.service.js';
@@ -49,6 +51,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
     private readonly pricing: PricingService,
     private readonly payments: PaymentsService,
     private readonly notifications: NotificationsService,
+    private readonly messaging: MessagingService,
   ) {}
 
   onModuleInit() {
@@ -65,7 +68,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
   /* ───────── helpers ───────── */
 
   accessToken(code: string) {
-    return createHmac('sha256', env.JWT_SECRET).update(`booking:${code}`).digest('base64url').slice(0, 32);
+    return stayToken(code);
   }
   verifyAccess(code: string, token: string | undefined) {
     const expected = this.accessToken(code);
@@ -184,7 +187,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
     const r = await this.prisma.reservation.findUniqueOrThrow({ where: { id: reservationId }, include: { contact: true, payments: true } });
     const n = r.payments.length + 1;
     const intent = await this.prisma.paymentIntent.create({
-      data: { reservationId, purpose, amountMinor: amount, currency: r.currency, provider: this.payments.provider, merchantReference: `${r.code}-P${n}`, expiresAt: r.holdExpiresAt ?? new Date(Date.now() + 24 * 3600_000) },
+      data: { reservationId, purpose, amountMinor: amount, currency: r.currency, provider: await this.payments.provider(), merchantReference: `${r.code}-P${n}`, expiresAt: r.holdExpiresAt ?? new Date(Date.now() + 24 * 3600_000) },
     });
     const [first, ...rest] = r.contact.name.split(' ');
     const order = await this.payments.createOrder({
@@ -310,16 +313,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.paymentIntent.update({ where: { id: intentId }, data: { status: 'FAILED', providerStatus: s.providerStatus } });
     const r = intent.reservation;
     await this.change(this.prisma, r.id, 'payment_failed', `Payment ${intent.merchantReference} did not go through (${s.providerStatus})`);
-    if (r.contact.email && r.status === 'HELD') {
-      await this.notifications.email({
-        to: r.contact.email,
-        subject: `Your payment did not go through (${r.code})`,
-        heading: 'The payment did not go through.',
-        paragraphs: ['Nothing was taken. Your rooms are still held for a few more minutes — you can try again, or pay another way.', 'If it keeps failing, message us on WhatsApp and we will help.'],
-        facts: [['Booking', r.code], ['Hold ends', r.holdExpiresAt ? new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Kampala' }).format(r.holdExpiresAt) : '—']],
-        action: { label: 'Try again', url: `${env.WEB_URL}/stay?code=${r.code}&t=${this.accessToken(r.code)}` },
-      });
-    }
+    if (r.status === 'HELD') await this.messaging.forReservation('booking.payment_failed', r.id).catch((e) => this.log.error(e));
     return { failed: true };
   }
 
@@ -338,16 +332,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
       return r;
     });
     if (done && !force) {
-      const c = await this.prisma.contact.findUnique({ where: { id: done.contactId } });
-      if (c?.email) {
-        await this.notifications.email({
-          to: c.email,
-          subject: `Your hold has ended (${done.code})`,
-          heading: 'We let the rooms go.',
-          paragraphs: ['We held your rooms for a while but no payment arrived, so they are free for others again. Nothing was charged.', 'If you still want to come, start again — or message us on WhatsApp and we will sort it out with you.'],
-          action: { label: 'Start again', url: `${env.WEB_URL}/book?arrival=${iso(done.arrival)}&departure=${iso(done.departure)}&adults=${done.adults}` },
-        });
-      }
+      await this.messaging.forReservation('booking.hold_expired', done.id).catch((e) => this.log.error(e));
     }
     return done;
   }
@@ -419,15 +404,9 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
       return { r, refundDue, kept };
     });
     await this.audit.record({ actor, action: 'reservation.cancel', entityType: 'Reservation', entityId: id, summary: `Cancelled ${out.r.code}: ${reason}` });
-    const c = await this.prisma.contact.findUnique({ where: { id: out.r.contactId } });
-    if (c?.email && out.r.status === 'CONFIRMED') {
-      await this.notifications.email({
-        to: c.email,
-        subject: `Your booking is cancelled (${out.r.code})`,
-        heading: 'Your booking is cancelled.',
-        paragraphs: [out.refundDue > 0n ? `We will refund ${this.money(out.refundDue, out.r.currency)} to the way you paid. It can take a few days to show.` : 'Under the cancellation terms of your rate, no refund is due.', 'We hope to host you another time.'],
-        facts: [['Booking', out.r.code], ['Dates', `${iso(out.r.arrival)} → ${iso(out.r.departure)}`]],
-      });
+    if (out.r.status === 'CONFIRMED') {
+      const refund = out.refundDue > 0n ? `We will refund ${this.money(out.refundDue, out.r.currency)} the way you paid. It can take a few days to show.` : 'Under the cancellation terms of your rate, no refund is due.';
+      await this.messaging.forReservation('booking.cancelled', id, { refund }).catch((e) => this.log.error(e));
     }
     return { refundDueMinor: out.refundDue.toString() };
   }
@@ -564,37 +543,11 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /** Email, SMS and WhatsApp from the owner's templates (Settings → Messages). */
   async sendConfirmation(reservationId: string) {
-    const stay = await this.prisma.reservation.findUniqueOrThrow({ where: { id: reservationId }, select: { code: true, contact: true } });
-    if (!stay.contact.email) return;
-    const g = await this.guestStay(stay.code);
-    const settings = Object.fromEntries((await this.prisma.setting.findMany({ where: { key: { in: ['contact.address', 'contact.whatsapp', 'hotel.name'] } } })).map((s) => [s.key, s.value]));
-    const fmt = (d: string) => new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${d}T12:00:00Z`));
-    await this.notifications.email({
-      to: stay.contact.email,
-      subject: `Your stay is confirmed — ${g.code}`,
-      heading: `See you on the mountain, ${g.guestName.split(' ')[0]}.`,
-      paragraphs: [
-        'Your booking is confirmed. Everything you need is below; keep this email.',
-        'Leave Kampala by 6:30 to miss the Jinja traffic — it is about six to seven hours with a lunch stop in Mbale. The last kilometre is graded murram; take it slowly after rain. The gate is staffed all night; call from Mbale if you will be late.',
-      ],
-      facts: [
-        ['Booking', g.code],
-        ['Arrive', `${fmt(g.arrival)} from ${g.checkIn}`],
-        ['Leave', `${fmt(g.departure)} by ${g.checkOut}`],
-        ['Room', g.rooms.map((r) => `${r.quantity} × ${t(r.name)}`).join(', ')],
-        ['Rate', t(g.ratePlan.name)],
-        ['Guests', `${g.adults} adult(s)${g.children ? `, ${g.children} child(ren)` : ''}`],
-        ...g.extras.map((e) => [t(e.name), this.money(BigInt(e.totalMinor), g.currency)] as [string, string]),
-        ['Total', this.money(BigInt(g.totalMinor), g.currency)],
-        ['Paid', this.money(BigInt(g.paidMinor), g.currency)],
-        ['Balance at arrival', this.money(BigInt(g.balanceMinor), g.currency)],
-        ['Address', t(settings['contact.address'] as Record<string, string>)],
-      ],
-      action: { label: 'See or change your stay', url: `${env.WEB_URL}/stay?code=${g.code}&t=${this.accessToken(g.code)}` },
-      footnote: `${t(g.cancellation)} Questions? WhatsApp ${String(settings['contact.whatsapp'] ?? '')}.`,
-    });
+    await this.messaging.forReservation('booking.confirmed', reservationId);
   }
+
 
   /* ───────── owner brief ───────── */
 

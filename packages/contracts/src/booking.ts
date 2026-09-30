@@ -111,6 +111,7 @@ export interface BookingStartedDTO {
   accessToken: string;
 }
 
+export const zStayVerify = z.object({ code: z.string().trim().toUpperCase(), phone: z.string().trim().min(7).max(40), otp: z.string().trim().regex(/^\d{6}$/, 'Six digits') });
 export const zStayLookup = z.object({ code: z.string().trim().toUpperCase().regex(/^RB-[2-9A-Z]{5}$/, 'Codes look like RB-7K3QX'), phone: z.string().trim().min(7).max(40) });
 
 export interface GuestStayDTO {

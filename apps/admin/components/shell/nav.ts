@@ -1,7 +1,7 @@
 import type { Permission } from '@reberon/contracts';
 import {
   BedDouble, BookOpenText, CalendarRange, CircleHelp, ConciergeBell, FileText, Hammer, Home, Image, Inbox, ListChecks, Map, Navigation, ScrollText,
-  Settings, Shuffle, SprayCan, Building2, Users, Rocket, Gift, Sunset, LayoutGrid, Contact, MessageCircleHeart, ChartColumnBig, type LucideIcon,
+  Settings, Shuffle, SprayCan, Building2, Users, Rocket, Gift, Sunset, LayoutGrid, Contact, MessageCircleHeart, ChartColumnBig, Send, PlugZap, MessagesSquare, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -23,6 +23,7 @@ export const NAV: NavGroup[] = [
       { label: 'Today', href: '/', icon: Home, perm: 'dashboard:view' },
       { label: 'Inbox', href: '/inbox', icon: Inbox, perm: 'inbox:read', badge: 'inbox' },
       { label: 'First-stay list', href: '/waitlist', icon: ListChecks, perm: 'waitlist:read', badge: 'waitlist' },
+      { label: 'Sent messages', href: '/messages', icon: Send, perm: 'messages:read' },
     ],
   },
   {
@@ -64,6 +65,8 @@ export const NAV: NavGroup[] = [
     label: 'Admin',
     items: [
       { label: 'Settings', href: '/settings', icon: Settings, perm: 'settings:read' },
+      { label: 'Messages', href: '/settings/messages', icon: MessagesSquare, perm: 'settings:read' },
+      { label: 'Integrations', href: '/settings/integrations', icon: PlugZap, perm: 'vault:manage' },
       { label: 'People', href: '/settings/users', icon: Users, perm: 'users:manage' },
       { label: 'Audit log', href: '/settings/audit', icon: ScrollText, perm: 'audit:read' },
     ],

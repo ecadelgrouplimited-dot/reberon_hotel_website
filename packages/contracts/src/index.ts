@@ -7,3 +7,4 @@ export * from './dto.js';
 export * from './inputs.js';
 export * from './booking.js';
 export * from './house.js';
+export * from './messaging.js';

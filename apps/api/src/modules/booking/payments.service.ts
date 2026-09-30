@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../../common/redis.service.js';
 import { badRequest } from '../../common/errors.js';
 import { env } from '../../config.js';
+import { IntegrationsService, pesapalBase, type ResolvedIntegration } from '../integrations/integrations.service.js';
 
 export interface OrderRequest {
   merchantReference: string;
@@ -22,8 +23,6 @@ export interface ProviderStatus {
   merchantReference?: string;
 }
 
-const PESAPAL_BASE = { sandbox: 'https://cybqa.pesapal.com/pesapalv3', live: 'https://pay.pesapal.com/v3' };
-
 /**
  * Talks to payment providers only; what a payment *means* for a booking lives
  * in BookingService. Keys never leave the API.
@@ -31,14 +30,24 @@ const PESAPAL_BASE = { sandbox: 'https://cybqa.pesapal.com/pesapalv3', live: 'ht
 @Injectable()
 export class PaymentsService {
   private readonly log = new Logger('Payments');
-  private token: { value: string; expires: number } | null = null;
+  private token: { value: string; expires: number; keyId: string } | null = null;
 
-  constructor(private readonly redis: RedisService) {}
+  constructor(
+    private readonly redis: RedisService,
+    private readonly integrations: IntegrationsService,
+  ) {}
 
-  get provider(): 'PESAPAL' | 'TEST' {
-    if (env.PAYMENT_PROVIDER === 'PESAPAL' && env.PESAPAL_CONSUMER_KEY && env.PESAPAL_CONSUMER_SECRET) return 'PESAPAL';
+  /** Pesapal from the vault (or environment); the simulated provider only outside production. */
+  async provider(): Promise<'PESAPAL' | 'TEST'> {
+    if (await this.integrations.get('PESAPAL')) return 'PESAPAL';
     if (env.NODE_ENV === 'production') throw badRequest('Online payment is not set up yet. Please book on WhatsApp.');
     return 'TEST';
+  }
+
+  private async cfg(): Promise<ResolvedIntegration> {
+    const c = await this.integrations.get('PESAPAL');
+    if (!c) throw badRequest('Online payment is not set up yet.');
+    return c;
   }
 
   /** Amounts go to Pesapal in major units. */
@@ -47,7 +56,7 @@ export class PaymentsService {
   }
 
   async createOrder(o: OrderRequest): Promise<{ redirectUrl: string; trackingId: string | null; provider: 'PESAPAL' | 'TEST' }> {
-    if (this.provider === 'TEST') {
+    if ((await this.provider()) === 'TEST') {
       return { provider: 'TEST', trackingId: null, redirectUrl: `${env.WEB_URL}/book/test-payment?ref=${encodeURIComponent(o.merchantReference)}` };
     }
     const ipnId = await this.ipnId();
@@ -85,8 +94,9 @@ export class PaymentsService {
   }
 
   private async ipnId(): Promise<string> {
+    const c = await this.cfg();
     const url = `${env.API_URL}/v1/webhooks/pesapal`;
-    const key = `pesapal:${env.PESAPAL_ENV}:ipn:${url}`;
+    const key = `pesapal:${c.mode}:${c.values.consumerKey?.slice(-6)}:ipn:${url}`;
     const cached = await this.redis.client.get(key);
     if (cached) return cached;
     const r = await this.call<{ ipn_id: string }>('POST', '/api/URLSetup/RegisterIPN', { url, ipn_notification_type: 'POST' });
@@ -96,21 +106,23 @@ export class PaymentsService {
   }
 
   private async bearer() {
-    if (this.token && this.token.expires > Date.now() + 30_000) return this.token.value;
-    const res = await fetch(`${PESAPAL_BASE[env.PESAPAL_ENV]}/api/Auth/RequestToken`, {
+    const c = await this.cfg();
+    const keyId = `${c.mode}:${c.values.consumerKey}`;
+    if (this.token && this.token.keyId === keyId && this.token.expires > Date.now() + 30_000) return this.token.value;
+    const res = await fetch(`${pesapalBase(c.mode)}/api/Auth/RequestToken`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify({ consumer_key: env.PESAPAL_CONSUMER_KEY, consumer_secret: env.PESAPAL_CONSUMER_SECRET }),
+      body: JSON.stringify({ consumer_key: c.values.consumerKey, consumer_secret: c.values.consumerSecret }),
       signal: AbortSignal.timeout(15_000),
     });
     const j = (await res.json()) as { token?: string; expiryDate?: string; error?: { message?: string } };
     if (!j.token) throw new Error(`Pesapal auth failed: ${j.error?.message ?? res.status}`);
-    this.token = { value: j.token, expires: j.expiryDate ? Date.parse(j.expiryDate) : Date.now() + 4 * 60_000 };
+    this.token = { value: j.token, keyId, expires: j.expiryDate ? Date.parse(j.expiryDate) : Date.now() + 4 * 60_000 };
     return j.token;
   }
 
   private async call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
-    const res = await fetch(`${PESAPAL_BASE[env.PESAPAL_ENV]}${path}`, {
+    const res = await fetch(`${pesapalBase((await this.cfg()).mode)}${path}`, {
       method,
       headers: { authorization: `Bearer ${await this.bearer()}`, 'content-type': 'application/json', accept: 'application/json' },
       body: body ? JSON.stringify(body) : undefined,

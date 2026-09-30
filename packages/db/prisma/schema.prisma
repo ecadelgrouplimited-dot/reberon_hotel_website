@@ -150,6 +150,7 @@ model MediaAsset {
   avatarOf          User[]        @relation("UserAvatar")
   roomTypeHeroes    RoomType[]    @relation("RoomTypeHero")
   roomTypePlans     RoomType[]    @relation("RoomTypeFloorPlan")
+  tourPosters       Tour[]        @relation("TourPoster")
   destinationHeroes Destination[] @relation("DestinationHero")
 
   @@index([folder])
@@ -427,6 +428,7 @@ model RoomType {
   amenities RoomTypeAmenity[]
   rooms     Room[]
   waitlist  WaitlistEntry[]
+  tours     Tour[]
 }
 
 model Amenity {
@@ -889,6 +891,8 @@ model Reservation {
   checkedInById        String?           @db.Uuid
   checkedOutAt         DateTime?
   checkedOutById       String?           @db.Uuid
+  /// Movement III: the website visitor had walked a tour before booking (anonymous session id)
+  tourSessionId        String?
   createdById          String?           @db.Uuid
   version              Int               @default(1)
   isSeed               Boolean           @default(false)
@@ -1295,4 +1299,117 @@ model StayOtp {
   createdAt DateTime  @default(now())
 
   @@index([code, phone])
+}
+
+// ═════════════════════════ Movement III — the Walk (M04) ═════════════════════════
+
+enum TourSpace {
+  LOBBY
+  ROOM_TYPE
+  HALL
+  COMPOUND
+  BEYOND
+}
+
+enum TourProvider {
+  MATTERPORT
+  KUULA
+  VIDEO
+  CUSTOM_URL
+  /// A walk through drawings or photos in the media library, before a scan exists
+  DRAWINGS
+}
+
+enum TourStage {
+  PRE_OPENING
+  LIVE
+}
+
+enum TourVariant {
+  EMPTY
+  SET
+}
+
+/// One walk-through. A slot is space + room type + variant; a published LIVE tour replaces the PRE_OPENING one in the same slot.
+model Tour {
+  id         String        @id @default(uuid(7)) @db.Uuid
+  slug       String        @unique
+  title      Json
+  summary    Json          @default("{}")
+  space      TourSpace
+  roomTypeId String?       @db.Uuid
+  variant    TourVariant?
+  provider   TourProvider
+  /// Normalised embed URL (iframe providers)
+  embedUrl   String?
+  /// DRAWINGS: the frames, in walking order
+  mediaIds   String[]      @default([])
+  posterId   String?       @db.Uuid
+  stage      TourStage     @default(PRE_OPENING)
+  status     ContentStatus @default(DRAFT)
+  order      Int           @default(0)
+  isSeed     Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  deletedAt  DateTime?
+
+  roomType RoomType?     @relation(fields: [roomTypeId], references: [id], onDelete: SetNull)
+  poster   MediaAsset?   @relation("TourPoster", fields: [posterId], references: [id], onDelete: SetNull)
+  hotspots TourHotspot[]
+  events   TourEvent[]
+
+  @@index([space, roomTypeId, variant, stage, status])
+}
+
+enum HotspotKind {
+  BED
+  BATH
+  VIEW
+  CAPACITY
+  ACCESS
+  OTHER
+}
+
+/// A labelled fact inside a tour. For DRAWINGS it sits on a frame at (x, y) in 0..1.
+model TourHotspot {
+  id          String      @id @default(uuid(7)) @db.Uuid
+  tourId      String      @db.Uuid
+  kind        HotspotKind
+  label       Json
+  note        Json        @default("{}")
+  providerRef String?
+  frame       Int?        @db.SmallInt
+  x           Float?
+  y           Float?
+  order       Int         @default(0)
+
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
+}
+
+enum TourEventKind {
+  OPENED
+  COMPLETED
+  HOTSPOT
+  CTA_CLICK
+}
+
+enum TourContext {
+  ROOM_PAGE
+  CHECKOUT
+  PAGE
+}
+
+/// Anonymous: a random session id from the browser, never a person.
+model TourEvent {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  tourId    String        @db.Uuid
+  sessionId String
+  event     TourEventKind
+  context   TourContext
+  createdAt DateTime      @default(now())
+
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
+
+  @@index([tourId, createdAt])
+  @@index([sessionId])
 }

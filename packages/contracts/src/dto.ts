@@ -1,3 +1,4 @@
+import type { TourDTO } from './tours.js';
 import type { LText, LRich } from './localized.js';
 import type { Block } from './blocks.js';
 import type {
@@ -110,6 +111,8 @@ export interface RoomTypeDetailDTO extends RoomTypeCardDTO {
   amenities: AmenityDTO[];
   seo: SeoDTO;
   related: RoomTypeCardDTO[];
+  /** Movement III: the walk for this room type, when tours are switched on and one is published. */
+  tour: TourDTO | null;
 }
 
 export interface FacilityDTO {

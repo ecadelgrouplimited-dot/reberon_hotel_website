@@ -161,6 +161,7 @@ export class BookingService implements OnModuleInit, OnModuleDestroy {
         cancellationSnapshot: { rules, text: lt(plan.cancellationPolicy?.text) } as unknown as Prisma.InputJsonValue,
         eta: input.eta,
         guestNotes: input.notes,
+        tourSessionId: 'tourSessionId' in input ? (input.tourSessionId ?? null) : null,
         holdExpiresAt: opts.status === 'HELD' ? new Date(Date.now() + opts.holdMinutes * 60_000) : null,
         confirmedAt: opts.status === 'CONFIRMED' ? new Date() : null,
         createdById: opts.actorId ?? null,

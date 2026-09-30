@@ -3,13 +3,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ArrowRight, BedDouble, Check, LoaderCircle, Minus, Plus, ShieldCheck, Users } from 'lucide-react';
-import type { AvailabilityDTO, BookingStartedDTO, OfferDTO, OfferPlanDTO } from '@reberon/contracts';
+import { ArrowLeft, ArrowRight, BedDouble, Check, LoaderCircle, Minus, Plus, Rotate3d, ShieldCheck, Users } from 'lucide-react';
+import type { AvailabilityDTO, BookingStartedDTO, OfferDTO, OfferPlanDTO, TourDTO } from '@reberon/contracts';
 import { t } from '@reberon/contracts/text';
 import { formatMoney, type Currency } from '@reberon/utils';
 import { cn } from '@/lib/cn';
 import { useSite } from '@/components/site/site-provider';
 import { CurrencyToggle } from '@/components/site/price';
+import { TourPlayer, walkedSession } from '@/components/tours/tour-player';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -52,6 +53,11 @@ export function BookingFlow() {
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const preferRoom = params.get('room');
+  // Movement III: walks for the rooms on offer (empty while tours are switched off).
+  const [tours, setTours] = useState<TourDTO[]>([]);
+  useEffect(() => {
+    fetch(`${API}/v1/public/tours`).then((r) => (r.ok ? r.json() : [])).then(setTours).catch(() => undefined);
+  }, []);
 
   async function search() {
     if (arrival >= departure) return setError('Your departure must be after your arrival.');
@@ -108,7 +114,7 @@ export function BookingFlow() {
           extras: Object.entries(extras).filter(([, n]) => n > 0).map(([extraId, quantity]) => ({ extraId, quantity })),
           payInFull: payInFull || depositPct >= 100,
           guest: { name: guest.name, phone: guest.phone, email: guest.email },
-          eta: guest.eta || undefined, notes: guest.notes || undefined, consent,
+          eta: guest.eta || undefined, notes: guest.notes || undefined, consent, tourSessionId: walkedSession(),
         }),
       });
       const j = await res.json();
@@ -199,7 +205,13 @@ export function BookingFlow() {
                     <div className="p-5 sm:p-6">
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <h2 className="text-step-2">{t(o.roomType.name)}</h2>
-                        <Link href={`/rooms/${o.roomType.slug}`} target="_blank" className="text-sm text-fg-muted underline-offset-4 hover:underline">About this room</Link>
+                        <span className="flex items-center gap-4">
+                          {(() => {
+                            const tour = tours.find((x) => x.space === 'ROOM_TYPE' && x.roomTypeId === o.roomType.id);
+                            return tour ? <TourPlayer tour={tour} context="CHECKOUT">{(open) => <button type="button" onClick={open} className="flex items-center gap-1.5 text-sm font-medium text-brand underline-offset-4 hover:underline"><Rotate3d className="size-4" aria-hidden /> Walk it</button>}</TourPlayer> : null;
+                          })()}
+                          <Link href={`/rooms/${o.roomType.slug}`} target="_blank" className="text-sm text-fg-muted underline-offset-4 hover:underline">About this room</Link>
+                        </span>
                       </div>
                       <p className="mt-1 flex flex-wrap gap-x-4 text-sm text-fg-muted"><span className="flex items-center gap-1"><Users className="size-4" /> sleeps {o.roomType.sleepsAdults}{o.roomType.sleepsChildren ? ` + ${o.roomType.sleepsChildren}` : ''}</span><span className="flex items-center gap-1"><BedDouble className="size-4" /> {t(o.roomType.bedConfig)}</span></p>
                       {o.roomsNeeded > 1 && o.plans.length > 0 && <p className="mt-2 text-sm font-medium text-brand">Your party needs {o.roomsNeeded} of these rooms — prices below are for all of them.</p>}

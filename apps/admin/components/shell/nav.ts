@@ -1,7 +1,7 @@
 import type { Permission } from '@reberon/contracts';
 import {
   BedDouble, BookOpenText, CalendarRange, CircleHelp, ConciergeBell, FileText, Hammer, Home, Image, Inbox, ListChecks, Map, Navigation, ScrollText,
-  Settings, Shuffle, SprayCan, Building2, Users, Rocket, Gift, Sunset, LayoutGrid, Contact, MessageCircleHeart, ChartColumnBig, Send, PlugZap, MessagesSquare, type LucideIcon,
+  Settings, Shuffle, SprayCan, Building2, Users, Rocket, Gift, Sunset, LayoutGrid, Contact, MessageCircleHeart, ChartColumnBig, Send, PlugZap, MessagesSquare, Rotate3d, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -33,6 +33,7 @@ export const NAV: NavGroup[] = [
       { label: 'Pages', href: '/website/pages', icon: FileText, perm: 'content:read' },
       { label: 'Rooms', href: '/website/rooms', icon: BedDouble, perm: 'content:read' },
       { label: 'Facilities', href: '/website/facilities', icon: Building2, perm: 'content:read' },
+      { label: 'Virtual tours', href: '/website/tours', icon: Rotate3d, perm: 'content:read' },
       { label: 'Kapchorwa', href: '/website/destinations', icon: Map, perm: 'content:read' },
       { label: 'Hotel rising', href: '/website/rising', icon: Hammer, perm: 'content:read' },
       { label: 'Questions', href: '/website/faqs', icon: CircleHelp, perm: 'content:read' },

@@ -13,13 +13,16 @@ import { MediaReplaceController } from './media-replace.controller.js';
 import { SiteOverviewController } from './overview.controller.js';
 import { RevalidationListener, SiteStatusController } from './revalidation.listener.js';
 import { SchedulerService } from './scheduler.service.js';
+import { ToursService } from './tours.service.js';
+import { PublicToursController, ToursAdminController } from './tours.controller.js';
 
 @Module({
   controllers: [
     PublicContentController, PagesAdminController, RoomsAdminController, FacilitiesAdminController, DestinationsAdminController,
     ProgressAdminController, FaqAdminController, SiteStructureAdminController, SettingsAdminController, SiteStatusController, MediaReplaceController, SiteOverviewController,
+    PublicToursController, ToursAdminController,
   ],
-  providers: [ResolverService, SettingsService, PagesService, ContentOps, RevalidationListener, SchedulerService],
-  exports: [ResolverService, SettingsService],
+  providers: [ResolverService, SettingsService, PagesService, ContentOps, RevalidationListener, SchedulerService, ToursService],
+  exports: [ResolverService, SettingsService, ToursService],
 })
 export class ContentModule {}

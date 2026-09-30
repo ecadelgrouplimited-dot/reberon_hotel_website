@@ -4,6 +4,7 @@ import { PrismaService } from '../../common/prisma.service.js';
 import { CacheService } from '../../common/cache.service.js';
 import { notFound } from '../../common/errors.js';
 import { ResolverService } from './resolver.service.js';
+import { ToursService } from './tours.service.js';
 import { SettingsService } from './settings.service.js';
 import { verifyPreviewToken } from './preview.js';
 import { lt, lr, pick, toAmenity, toDestinationCard, toFacility, toFaqGroup, toMediaRef, toProgress, toRoomCard, toSeo } from './mappers.js';
@@ -18,6 +19,7 @@ export class PublicContentController {
     private readonly cache: CacheService,
     private readonly resolver: ResolverService,
     private readonly settings: SettingsService,
+    private readonly tours: ToursService,
   ) {}
 
   @Get('site')
@@ -75,7 +77,7 @@ export class PublicContentController {
 
   @Get('room-types/:slug')
   roomType(@Param('slug') slug: string): Promise<RoomTypeDetailDTO> {
-    return this.cache.wrap(`room-type:${slug}`, [`room-type:${slug}`, 'room-types', 'media'], TTL, async () => {
+    return this.cache.wrap(`room-type:${slug}`, [`room-type:${slug}`, 'room-types', 'media', 'tours', 'site'], TTL, async () => {
       const r = await this.prisma.roomType.findFirst({
         where: { slug, status: 'PUBLISHED', deletedAt: null },
         include: { ...roomInclude, floorPlan: true, amenities: { include: { amenity: true }, orderBy: { order: 'asc' } } },
@@ -93,6 +95,7 @@ export class PublicContentController {
         amenities: r.amenities.map((a) => toAmenity(a.amenity)),
         seo: toSeo(r.seo),
         related: related.map(toRoomCard),
+        tour: await this.tours.forRoomType(r.id),
       };
     });
   }

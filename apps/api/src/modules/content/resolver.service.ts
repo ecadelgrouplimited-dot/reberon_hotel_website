@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { collectMediaIds, collectRefIds, type Block, type MediaRef, type ResolvedBlock } from '@reberon/contracts';
 import { PrismaService } from '../../common/prisma.service.js';
+import { ToursService } from './tours.service.js';
 import { toMediaRef, toRoomCard, toFacility, toProgress, toDestinationCard, toFaqGroup, pick, toAmenity, lr, lt } from './mappers.js';
 
 const roomInclude = { hero: true, _count: { select: { rooms: { where: { isActive: true } } } } } as const;
@@ -11,7 +12,10 @@ const roomInclude = { hero: true, _count: { select: { rooms: { where: { isActive
  */
 @Injectable()
 export class ResolverService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tours: ToursService,
+  ) {}
 
   async mediaMap(ids: Iterable<string>): Promise<Map<string, MediaRef>> {
     const unique = [...new Set(ids)].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
@@ -86,6 +90,12 @@ export class ResolverService {
         if (!id) return undefined;
         const g = await this.prisma.faqGroup.findUnique({ where: { id }, include: { items: { orderBy: { order: 'asc' } } } });
         return g ? { group: toFaqGroup(g) } : undefined;
+      }
+      case 'tourEmbed': {
+        const space = String(b.data.space ?? '');
+        const [roomTypeId] = collectRefIds(b, 'roomType');
+        const tours = (await this.tours.forSpace(space as never)).filter((x) => space !== 'ROOM_TYPE' || x.roomTypeId === roomTypeId);
+        return tours.length ? { tours } : undefined;
       }
       case 'voices': {
         const limit = typeof b.data.limit === 'number' ? b.data.limit : 6;

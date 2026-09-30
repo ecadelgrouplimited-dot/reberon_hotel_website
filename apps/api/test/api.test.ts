@@ -340,3 +340,33 @@ describe('the house (Movement IV)', () => {
     assert.equal((await owner.get(`/admin/reports/house?from=${today}&to=${from}`)).status, 422);
   });
 });
+
+describe('the walk (Movement III) and messaging', () => {
+  test('tours stay off the website until switched on', async () => {
+    const r = await new Client().get('/public/tours');
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body, []);
+    const room = await new Client().get('/public/room-types/elgon-view-king');
+    assert.equal(room.body.tour, null);
+  });
+
+  test('tour links are checked and the desk cannot edit tours', async () => {
+    const owner = await as('owner@reberonhotel.ug');
+    const bad = await owner.post('/admin/tours', { slug: 'test-bad-link', title: { en: 'TEST' }, space: 'LOBBY', provider: 'MATTERPORT', embedUrl: 'https://example.com/x', stage: 'LIVE', status: 'PUBLISHED' });
+    assert.equal(bad.status, 422);
+    assert.equal((await (await as('desk@reberonhotel.ug')).post('/admin/tours', {})).status, 403);
+    assert.equal((await new Client().post('/public/tours/00000000-0000-7000-8000-000000000000/events', { sessionId: 'x', event: 'OPENED', context: 'PAGE' })).status, 422);
+  });
+
+  test('only the owner holds the keys; templates refuse unknown fields', async () => {
+    assert.equal((await (await as('manager@reberonhotel.ug')).get('/admin/integrations')).status, 403);
+    const owner = await as('owner@reberonhotel.ug');
+    const list = await owner.get('/admin/integrations');
+    assert.equal(list.status, 200);
+    assert.doesNotMatch(JSON.stringify(list.body), /secretsEnc|consumerSecret":"[^"n]/);
+    const tpls = (await owner.get('/admin/message-templates')).body as { id: string; key: string; channel: string }[];
+    const sms = tpls.find((x) => x.key === 'booking.confirmed' && x.channel === 'SMS')!;
+    const r = await owner.req('PUT', `/admin/message-templates/${sms.id}`, { body: 'Hello {{notAField}}' });
+    assert.equal(r.status, 422);
+  });
+});

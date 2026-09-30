@@ -98,6 +98,8 @@ export const zBookingInput = z.object({
   }),
   eta: z.string().max(40).optional(),
   notes: z.string().max(1000).optional(),
+  /** Movement III: the anonymous tour session, when the guest walked a tour first. */
+  tourSessionId: z.string().regex(/^[A-Za-z0-9_-]{12,64}$/).optional(),
   consent: z.literal(true, { error: 'Please accept the booking terms' }),
 });
 export type BookingInput = z.input<typeof zBookingInput>;

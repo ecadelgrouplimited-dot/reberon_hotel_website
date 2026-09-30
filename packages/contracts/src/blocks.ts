@@ -267,6 +267,20 @@ export const BLOCKS: BlockDefinition[] = [
     fields: [{ kind: 'ltext', name: 'text', label: 'Quote', required: true, multiline: true }, { kind: 'ltext', name: 'attribution', label: 'Attribution' }, { kind: 'media', name: 'media', label: 'Background image' }],
   },
   {
+    type: 'tourEmbed',
+    label: 'Virtual tour',
+    description: 'Walk a space: the hall (empty and set), the lobby, the compound or a room. Hidden until tours are switched on and one is published.',
+    icon: 'rotate-3d',
+    resolves: true,
+    fields: [
+      eyebrow,
+      heading(),
+      intro,
+      { kind: 'select', name: 'space', label: 'Which space', required: true, options: [{ value: 'HALL', label: 'The hall' }, { value: 'LOBBY', label: 'Lobby' }, { value: 'COMPOUND', label: 'The compound' }, { value: 'BEYOND', label: 'Beyond the gate' }, { value: 'ROOM_TYPE', label: 'A room type' }] },
+      { kind: 'ref', name: 'roomTypeId', label: 'Room type (when the space is a room)', entity: 'roomType' },
+    ],
+  },
+  {
     type: 'voices',
     label: 'Guest voices',
     description: 'What guests said, in their words — only those who agreed to be quoted.',

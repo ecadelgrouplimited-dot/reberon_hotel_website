@@ -13,6 +13,7 @@ import { RoomActions } from '@/components/site/room-actions';
 import { RoomGallery } from '@/components/site/room-gallery';
 import { RoomCard, RoomFacts } from '@/components/blocks/content';
 import { GalleryGrid } from '@/components/blocks/gallery';
+import { TourLauncher } from '@/components/tours/tour-player';
 
 export const revalidate = 60;
 type Props = { params: Promise<{ slug: string }> };
@@ -105,6 +106,7 @@ export default async function RoomPage({ params }: Props) {
             <div className="mt-6">
               <RoomActions slug={slug} name={name} />
             </div>
+            {room.tour && <TourLauncher tour={room.tour} context="ROOM_PAGE" className="mt-5" cta={site.features.bookingEnabled ? { label: 'Book this room', href: `/book?room=${slug}` } : undefined} />}
             <p className="mt-6 flex items-center gap-2 border-t border-line pt-5 text-sm text-fg-muted">
               <Clock className="size-4" aria-hidden /> Check-in {site.checkInTime} · Check-out {site.checkOutTime}
             </p>

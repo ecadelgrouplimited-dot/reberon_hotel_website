@@ -61,6 +61,8 @@ A manager edits a page in the House. The draft autosaves, and the preview beside
 
 ## Status
 
+Everything built so far, feature by feature: [`docs/FEATURES.md`](docs/FEATURES.md).
+
 - **Phase 0, foundation:** done.
 - **Phase 1, Movement I (the Face):** done:
   - the full website

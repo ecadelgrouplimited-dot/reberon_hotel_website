@@ -12,6 +12,8 @@ function Photo({ m, sizes, priority, className, onClick, label }: { m: MediaRef;
     <button type="button" onClick={onClick} aria-label={label} className={cn('zoom-on-hover group block overflow-hidden', !/(^|\s)absolute(\s|$)/.test(className ?? '') && 'relative', className)} style={{ backgroundColor: m.dominantColor ?? undefined }}>
       <Image src={m.url} alt={t(m.alt)} fill sizes={sizes} priority={priority} className="object-cover" style={{ objectPosition: `${m.focalX * 100}% ${m.focalY * 100}%` }} placeholder={m.lqip ? 'blur' : 'empty'} blurDataURL={m.lqip ?? undefined} />
       <span className="absolute inset-0 bg-basalt-950/0 transition-colors duration-500 group-hover:bg-basalt-950/10" />
+      {/* Labelled per image, so a real photo never carries a drawing's label. */}
+      {m.isRendering && <span className="absolute right-2.5 top-2.5 rounded-full bg-basalt-950/70 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-mist-50 backdrop-blur-md">Drawing</span>}
     </button>
   );
 }
@@ -56,8 +58,6 @@ export function RoomGallery({ slug, photos, roomName }: { slug: string; photos: 
 
   if (!photos.length) return null;
   const [hero, ...rest] = photos;
-  const anyDrawing = photos.some((p) => p.isRendering);
-
   return (
     <Lightbox items={photos}>
       {(open) => (
@@ -92,7 +92,6 @@ export function RoomGallery({ slug, photos, roomName }: { slug: string; photos: 
             ))}
           </div>
 
-          {anyDrawing && <span className="absolute left-3 top-3 z-10 rounded-full bg-basalt-950/70 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-mist-50 backdrop-blur-md">Drawings · photos follow</span>}
           {photos.length > 1 && (
             <button type="button" onClick={() => setGrid(true)} className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-2 rounded-full bg-mist-50 px-4 py-2 text-sm font-semibold text-basalt-950 shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5 max-md:bottom-3 max-md:left-3">
               <Grid2x2 className="size-4" aria-hidden /> Show all {photos.length} photos

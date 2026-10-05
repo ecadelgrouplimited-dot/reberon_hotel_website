@@ -69,9 +69,10 @@ export function Hero({ block, media, site, ctx, index }: BlockProps<HeroData>) {
   const slides = images.slice(0, mist ? 3 : 1).map((m, i) => (
     <div className="hero-parallax absolute inset-0" key={m.id}>
       <MediaImage media={m} sizes="100vw" priority={first && i === 0} className="absolute inset-0" imgClassName="ken-burns" />
+      {/* The label belongs to the image on screen: it fades in and out with its slide. */}
+      {m.isRendering && <RenderingBadge className="!top-24 !right-[clamp(1rem,4vw,2.5rem)]" />}
     </div>
   ));
-  const anyRendering = images.some((m) => m.isRendering);
 
   return (
     <section
@@ -123,7 +124,6 @@ export function Hero({ block, media, site, ctx, index }: BlockProps<HeroData>) {
         </div>
       </div>
 
-      {anyRendering && <RenderingBadge className="!top-24" />}
       {d.showScrollCue && !compact && (
         <div className="absolute bottom-8 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-3 text-[0.68rem] uppercase tracking-[0.3em] text-mist-50/70 md:flex" aria-hidden>
           Scroll
